@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "dev": "nodemon src/index.ts",
-  "build": "tsc",
-  "start": "node dist/index.js",
-  "test": "jest"
+    "dev": "nodemon src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
+    "express-validator": "^7.3.0",
     "helmet": "^8.1.0",
     "uuid": "^13.0.0",
     "xss-clean": "^0.1.4"

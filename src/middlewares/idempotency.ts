@@ -26,7 +26,7 @@ export const idempotencyHandler = (
   // Monkey-patch res.json() to store the result
   const originalJson = res.json.bind(res);
   res.json = (body: any) => {
-    idempotencyCache.set(key, body);
+    idempotencyCache.set(key, body);    
     return originalJson(body);
   };
 

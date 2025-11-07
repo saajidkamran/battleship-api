@@ -2,16 +2,16 @@ import express from "express";
 import { securityMiddleware } from "./middlewares/security";
 import { rateLimiter } from "./middlewares/rateLimiter";
 import { errorHandler } from "./middlewares/errorHandler";
-import gameRoutes from "./routes/gameRoutes";
+import gameRoutes from "./routes/v1/gameRoutes";
 
 const app = express();
 
-// --- Global Middlewares ---
+// ---Middlewares ---
 app.use(securityMiddleware);
 app.use(rateLimiter);
 
 // --- Routes ---
-app.use("/game", gameRoutes);
+app.use("/api/v1/game", gameRoutes);
 
 // --- Global Error Handler ---
 app.use(errorHandler);

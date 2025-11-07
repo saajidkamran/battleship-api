@@ -4,6 +4,7 @@ import * as gameService from "../services/gameService";
 
 export const startGame = (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log("Starting new game...")
     const game = gameService.startGame();
     res.status(201).json({
       message: "New game started.",

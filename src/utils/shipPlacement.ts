@@ -1,13 +1,17 @@
 import { Ship } from "../models/gameTypes";
+import crypto from "crypto";
 
-const ROWS = "ABCDEFGHIJ".split("");
+const ROWS = "ABCDEFGHIJ".split(""); // → ['A','B','C','D','E','F','G','H','I','J']
 
 export function placeShips(): Ship[] {
+  // 1 -> Battleship (5 cells long)
+  // 2 -> Destroyers (4 cells each)
   const fleet = [
     { name: "Battleship", size: 5 },
     { name: "Destroyer", size: 4 },
     { name: "Destroyer", size: 4 },
   ];
+
   const occupied = new Set<string>();
   const ships: Ship[] = [];
 

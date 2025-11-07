@@ -48,6 +48,6 @@ export function placeShips(): Ship[] {
       }
     }
   }
-
+  console.log("SHIP CORDINATES", ships);
   return ships;
 }

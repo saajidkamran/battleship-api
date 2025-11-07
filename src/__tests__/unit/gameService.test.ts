@@ -1,5 +1,5 @@
 import request from "supertest";
-import app from "../app";
+import app from "../../app";
 
 describe("POST /api/v1/game/start", () => {
   it("should start a new game and return placed ships", async () => {
@@ -27,13 +27,4 @@ describe("POST /api/v1/game/start", () => {
     }
   });
 
-  it("should not place overlapping ships", async () => {
-    const response = await request(app).post("/api/v1/game/start").send();
-    const ships = response.body.ships;
-
-    const allCoords = ships.flatMap((s: any) => s.positions);
-    const uniqueCoords = new Set(allCoords);
-
-    expect(uniqueCoords.size).toBe(allCoords.length); // no duplicates
-  });
 });

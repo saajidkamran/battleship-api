@@ -1,4 +1,4 @@
-import { placeShips } from "../../utils/shipPlacement";
+import { placeShips } from "../../services/shipPlacement";
 
 describe("placeShips()", () => {
   it("should not place overlapping ships", () => {

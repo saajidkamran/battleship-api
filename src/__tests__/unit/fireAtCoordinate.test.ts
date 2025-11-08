@@ -1,43 +1,7 @@
-describe("fireAtCoordinate - full outcome coverage", () => {
-  let fireAtCoordinate: any;
-  let getGame: any;
-  let startGame: any;
+import { setupIsolatedGameService } from "../helpers/testMocks";
 
-  jest.isolateModules(() => {
-    jest.mock("../../utils/shipPlacement", () => ({
-      placeShips: () => [
-        {
-          id: "1",
-          name: "Battleship",
-          size: 2,
-          positions: ["A1", "A2"],
-          hits: [],
-          isSunk: false,
-        },
-        {
-          id: "2",
-          name: "Destroyer1",
-          size: 1,
-          positions: ["B1"],
-          hits: [],
-          isSunk: false,
-        },
-        {
-          id: "3",
-          name: "Destroyer2",
-          size: 1,
-          positions: ["C1"],
-          hits: [],
-          isSunk: false,
-        },
-      ],
-    }));
-
-    const service = require("../../services/gameService");
-    fireAtCoordinate = service.fireAtCoordinate;
-    startGame = service.startGame;
-    getGame = service.getGame;
-  });
+describe("fireAtCoordinate ", () => {
+  const { fireAtCoordinate, getGame, startGame } = setupIsolatedGameService();
 
   it("should register a HIT when coordinate matches any ship", () => {
     const game = startGame();
@@ -68,15 +32,15 @@ describe("fireAtCoordinate - full outcome coverage", () => {
 
     // Hit every position of the first ship
     for (const pos of ship.positions) {
-      fireAtCoordinate(game.id, pos);
+      const result = fireAtCoordinate(game.id, pos);
+      // The last hit should mark the ship as sunk
+      if (pos === ship.positions[ship.positions.length - 1]) {
+        expect(result.sunk).toBe(ship.name);
+      }
     }
 
-    const result = fireAtCoordinate(
-      game.id,
-      ship.positions[ship.positions.length - 1]
-    );
+    // Verify the ship is marked as sunk
     const updatedGame = getGame(game.id);
-
     expect(updatedGame?.ships.find((s: any) => s.id === ship.id)?.isSunk).toBe(
       true
     );

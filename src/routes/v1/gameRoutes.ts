@@ -10,12 +10,13 @@ import {
   validateGameId,
   validateRequest,
 } from "../../middlewares/validateRequest";
+import { idempotencyHandler } from "../../middlewares/idempotency";
 const router = Router();
 
 // Start a new game
 router.post("/start", startGame);
 // Fire at a coordinate
-router.post("/:id/fire", validateFire, validateRequest, fire);
+router.post("/:id/fire", validateFire,idempotencyHandler, validateRequest, fire);
 // Get current game state
 router.get("/:id/state", validateGameId, validateRequest, getGameState);
 export default router;

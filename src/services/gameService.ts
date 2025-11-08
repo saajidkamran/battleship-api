@@ -64,3 +64,8 @@ export const fireAtCoordinate = (gameId: string, coordinate: string) => {
     gameStatus: game.status,
   };
 };
+// --- test hooks (only used by Jest) ---
+export const __test__ = {
+  _games: () => games,
+  _reset: () => games.clear()
+};

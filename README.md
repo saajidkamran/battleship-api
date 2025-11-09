@@ -115,7 +115,7 @@ npm start
 
 The API will be available at `http://localhost:3000`
 
-## 📚 API Documentation
+## API Documentation
 
 ### Base URL
 ```
@@ -237,6 +237,126 @@ GET /api/v1/game/:id/state
 
 ---
 
+#### Get Recent Games
+```http
+GET /api/v1/game/recent
+```
+
+Returns all games with `IN_PROGRESS` status that were created in the last 24 hours, ordered by creation date (newest first).
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Recent games (last 24 hours)",
+  "count": 2,
+  "games": [
+    {
+      "gameId": "550e8400-e29b-41d4-a716-446655440000",
+      "status": "IN_PROGRESS",
+      "shots": ["A1", "B2"],
+      "remainingShips": 2,
+      "createdAt": "2024-01-01T12:00:00.000Z"
+    },
+    {
+      "gameId": "660e8400-e29b-41d4-a716-446655440001",
+      "status": "IN_PROGRESS",
+      "shots": ["C3"],
+      "remainingShips": 3,
+      "createdAt": "2024-01-01T11:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Response Fields:**
+- `count`: Number of recent games found
+- `games`: Array of game objects with:
+  - `gameId`: Unique game identifier
+  - `status`: Game status (always `IN_PROGRESS` for recent games)
+  - `shots`: Array of coordinates that have been fired
+  - `remainingShips`: Number of ships that haven't been sunk
+  - `createdAt`: Timestamp when the game was created
+
+**Notes:**
+- Only returns games with `IN_PROGRESS` status
+- Only returns games created within the last 24 hours
+- Results are ordered by creation date (newest first)
+- Returns empty array if no recent games exist
+
+---
+
+#### Get Games by Status (with Pagination)
+```http
+GET /api/v1/game/status?status=IN_PROGRESS&page=1&limit=10
+```
+
+**Query Parameters:**
+- `status` (optional): Filter by game status (`IN_PROGRESS`, `WON`, `LOST`)
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10, max: 100)
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Games with status IN_PROGRESS",
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "status": "IN_PROGRESS",
+      "shots": ["A1", "B2"],
+      "ships": [...]
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+---
+
+#### Delete Game
+```http
+DELETE /api/v1/game/:id
+```
+
+**Path Parameters:**
+- `id` (UUID): Game ID
+
+**Response:** `200 OK`
+```json
+{
+  "message": "Game deleted successfully",
+  "gameId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid game ID format
+- `404 Not Found`: Game not found
+
+---
+
+#### Delete All Games
+```http
+DELETE /api/v1/game
+```
+
+**Response:** `200 OK`
+```json
+{
+  "message": "All games deleted successfully",
+  "deletedCount": 5
+}
+```
+
+---
+
 ## 🔒 Security Features
 
 - **Helmet.js**: Security headers
@@ -256,7 +376,7 @@ Test structure:
 - **Unit Tests**: Test individual functions in isolation
 - **Integration Tests**: Test API endpoints end-to-end
 
-## 📝 Environment Variables
+## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -275,7 +395,7 @@ Test structure:
 - **Win Condition**: Sink all ships
 - **Duplicate Shots**: Not allowed (returns 409 Conflict)
 
-## 🔄 Idempotency
+## Idempotency
 
 The API supports idempotent requests for the `fire` endpoint:
 
@@ -291,7 +411,7 @@ curl -X POST http://localhost:3000/api/v1/game/{gameId}/fire \
   -d '{"coordinate": "A1"}'
 ```
 
-## 📊 Logging
+## Logging
 
 The API uses structured logging with Pino:
 - **Development**: Pretty-printed colored logs
@@ -317,22 +437,9 @@ npm test         # Run tests
 - **Models**: TypeScript interfaces and types
 - **Middlewares**: Cross-cutting concerns (validation, errors, security)
 
-## 📄 License
-
-ISC
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📧 Support
-
-For issues and questions:
-- GitHub Issues: https://github.com/saajidkamran/battleship-api/issues
 
 ## 🎯 Future Improvements
 
-- [ ] Database persistence (SQLite/PostgreSQL)
 - [ ] Redis for idempotency cache
 - [ ] WebSocket support for real-time updates
 - [ ] Multiplayer support

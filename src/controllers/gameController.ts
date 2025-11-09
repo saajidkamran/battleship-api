@@ -115,3 +115,79 @@ export const getGames = async (
     next(err);
   }
 };
+
+export const deleteGame = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+
+    logger.info("Deleting game", {
+      requestId: req.requestId,
+      gameId: id,
+    });
+
+    await gameService.deleteGame(id);
+
+    res.status(200).json({
+      message: "Game deleted successfully",
+      gameId: id,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteAllGames = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    logger.info("Deleting all games", {
+      requestId: req.requestId,
+    });
+
+    const result = await gameService.deleteAllGames();
+
+    res.status(200).json({
+      message: "All games deleted successfully",
+      deletedCount: result.deletedCount,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getRecentGames = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    logger.info("Fetching recent games", {
+      requestId: req.requestId,
+    });
+
+    const games = await gameService.getRecentGames();
+
+    res.json({
+      message: "Recent games (last 24 hours)",
+      count: games.length,
+      games: games.map((game) => ({
+        gameId: game.id,
+        status: game.status,
+        shots: game.shots,
+        remainingShips: game.ships.filter((s) => !s.isSunk).length,
+        createdAt: game.createdAt,
+      })),
+    });
+  } catch (err) {
+    logger.error("Error fetching recent games", err, {
+      requestId: req.requestId,
+    });
+    next(err);
+  }
+};

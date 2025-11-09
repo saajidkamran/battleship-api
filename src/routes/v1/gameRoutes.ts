@@ -4,6 +4,9 @@ import {
   fire,
   getGameState,
   getGames,
+  deleteGame,
+  deleteAllGames,
+  getRecentGames,
 } from "../../controllers/gameController";
 import {
   validateFire,
@@ -34,5 +37,14 @@ router.get("/:id/state", validateGameId, validateRequest, getGameState);
 // Using GET for fetching data (RESTful best practice)
 // Query params: ?status=IN_PROGRESS&page=1&limit=10
 router.get("/status", validatePagination, validateRequest, getGames);
+
+// Get recent games (last 24 hours, IN_PROGRESS status)
+router.get("/recent", validateRequest, getRecentGames);
+
+// Delete a specific game
+router.delete("/:id", validateGameId, validateRequest, deleteGame);
+
+// Delete all games
+router.delete("/", deleteAllGames);
 
 export default router;

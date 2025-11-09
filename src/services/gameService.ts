@@ -128,3 +128,58 @@ export const getGames = async (
 
   return await gameRepo.getGamesByStatus(status, page, limit);
 };
+
+export const deleteGame = async (id: string): Promise<void> => {
+  const gameRepo = AppDataSource.getRepository(Game);
+  const shipRepo = AppDataSource.getRepository(Ship);
+
+  // Find game with ships
+  const game = await gameRepo.findOne({
+    where: { id },
+    relations: ["ships"],
+  });
+
+  if (!game) {
+    throw createNotFoundError("Game not found", { id });
+  }
+
+  // Delete ships first (cascade should handle this, but being explicit)
+  if (game.ships && game.ships.length > 0) {
+    await shipRepo.remove(game.ships);
+  }
+
+  // Delete the game
+  await gameRepo.remove(game);
+  logger.info(`Game ${id} deleted successfully`);
+};
+
+export const deleteAllGames = async (): Promise<{ deletedCount: number }> => {
+  const gameRepo = AppDataSource.getRepository(Game);
+  const shipRepo = AppDataSource.getRepository(Ship);
+
+  // Get all games with ships
+  const games = await gameRepo.find({
+    relations: ["ships"],
+  });
+
+  let deletedCount = 0;
+
+  // Delete all ships first
+  for (const game of games) {
+    if (game.ships && game.ships.length > 0) {
+      await shipRepo.remove(game.ships);
+    }
+    deletedCount++;
+  }
+
+  // Delete all games
+  await gameRepo.remove(games);
+  logger.info(`Deleted ${deletedCount} games successfully`);
+
+  return { deletedCount };
+};
+
+export const getRecentGames = async (): Promise<Game[]> => {
+  logger.info("Retrieving recent games");
+  return await gameRepo.getRecentGames();
+};

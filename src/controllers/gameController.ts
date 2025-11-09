@@ -62,3 +62,56 @@ export const getGameState = async (
     next(err);
   }
 };
+
+export const getGames = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    // Extract status from query params (production best practice)
+    // Fallback to body for backward compatibility
+    const statusInput = (req.query?.status as string) || req.body?.status;
+    const status =
+      typeof statusInput === "string"
+        ? statusInput.trim().toUpperCase()
+        : undefined;
+
+    // Extract pagination from query params (production best practice)
+    // Query params are preferred: more RESTful, cacheable, easier to use
+    const page = Math.max(
+      1,
+      parseInt((req.query?.page as string) || "") ||
+        parseInt((req.body?.page as string) || "") ||
+        1
+    );
+    const limit = Math.min(
+      100,
+      Math.max(
+        1,
+        parseInt((req.query?.limit as string) || "") ||
+          parseInt((req.body?.limit as string) || "") ||
+          10
+      )
+    );
+
+    logger.info("Fetching games", {
+      requestId: req.requestId,
+      status,
+      page,
+      limit,
+    });
+
+    const result = await gameService.getGames(status, page, limit);
+
+    res.json({
+      message: status ? `Games with status ${status}` : "All games",
+      ...result,
+    });
+  } catch (err) {
+    logger.error("Error fetching games", err, {
+      requestId: req.requestId,
+    });
+    next(err);
+  }
+};

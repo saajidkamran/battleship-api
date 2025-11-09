@@ -5,6 +5,7 @@ import { placeShips } from "./shipPlacement";
 import { createNotFoundError } from "../utils/errors";
 import { randomUUID } from "crypto";
 import { logger } from "../utils/logger";
+import * as gameRepo from "../repositories/gameRepository";
 
 export const startGame = async (): Promise<Game> => {
   const gameRepo = AppDataSource.getRepository(Game);
@@ -60,7 +61,7 @@ export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
   if (!game) throw new Error("Game not found");
 
   if (game.status === "WON") {
-    return { message: "Game already won!" };
+    return { message: "statusGame already won!" };
   }
 
   if (game.shots.includes(coordinate)) {
@@ -87,7 +88,7 @@ export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
   }
 
   const allSunk = game.ships.length > 0 && game.ships.every((s) => s.isSunk);
-  
+
   if (allSunk) game.status = "WON";
 
   await gameRepo.save(game);
@@ -102,4 +103,28 @@ export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
     sunk: sunkShip,
     gameStatus: game.status,
   };
+};
+
+export const getGames = async (
+  status?: string,
+  page: number = 1,
+  limit: number = 10
+) => {
+  const allowedStatuses = ["IN_PROGRESS", "WON", "LOST"];
+  
+  if (status && !allowedStatuses.includes(status)) {
+    throw new Error(`Invalid status value: ${status}`);
+  }
+  
+  // Validate pagination parameters
+  if (page < 1) {
+    throw new Error("Page must be greater than 0");
+  }
+  if (limit < 1 || limit > 100) {
+    throw new Error("Limit must be between 1 and 100");
+  }
+  
+  logger.info(`Retrieved games`, { status, page, limit });
+
+  return await gameRepo.getGamesByStatus(status, page, limit);
 };

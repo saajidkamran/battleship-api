@@ -61,7 +61,9 @@ export const getRecentGames = async (): Promise<Game[]> => {
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   return await gameRepo
     .createQueryBuilder("game")
+    .leftJoinAndSelect("game.ships", "ships")
     .where("game.status = :status", { status: "IN_PROGRESS" })
     .andWhere("game.createdAt > :date", { date: twentyFourHoursAgo })
+    .orderBy("game.createdAt", "DESC")
     .getMany();
 };

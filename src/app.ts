@@ -11,6 +11,7 @@ dotenv.config();
 const app = express();
 
 // ---Middlewares ---
+app.use(express.json());
 app.use(requestIdMiddleware);
 app.use(securityMiddleware);
 app.use(rateLimiter);

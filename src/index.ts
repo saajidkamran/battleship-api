@@ -4,28 +4,54 @@ import { logger } from "./utils/logger";
 import { env } from "./config/env";
 import { AppDataSource } from "./config/database";
 
-// Initialize database connection with retry logic
-const connectDatabase = async (retries = 5, delay = 2000): Promise<void> => {
+// Calculate exponential backoff delay with jitter
+const calculateBackoffDelay = (attempt: number, baseDelay: number = 1000): number => {
+  // Exponential backoff: baseDelay * 2^attempt
+  const exponentialDelay = baseDelay * Math.pow(2, attempt);
+  
+  // Add jitter: random value between 0 and 30% of the delay
+  const jitter = Math.random() * exponentialDelay * 0.3;
+  
+  // Cap maximum delay at 10 seconds
+  const totalDelay = Math.min(exponentialDelay + jitter, 10000);
+  
+  return Math.floor(totalDelay);
+};
+
+// Initialize database connection with exponential backoff and jitter
+const connectDatabase = async (retries = 5, baseDelay = 1000): Promise<void> => {
   for (let i = 0; i < retries; i++) {
     try {
-      logger.info(
-        `Connecting to MySQL database... (Attempt ${i + 1}/${retries})`
-      );
+      logger.info(`Connecting to MySQL database... (Attempt ${i + 1}/${retries})`, {
+        host: process.env.DB_HOST || "localhost",
+        port: process.env.DB_PORT || 3306,
+        database: process.env.DB_NAME || "battleship",
+      });
+      
       await AppDataSource.initialize();
-      logger.info("Database connected successfully");
+      logger.info("✅ MySQL database connected successfully");
       return;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.warn(
-        `Database connection attempt ${i + 1} failed: ${errorMessage}`
-      );
-
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorCode = (error as { code?: string }).code || "UNKNOWN";
+      
+      logger.warn(`Database connection attempt ${i + 1} failed`, {
+        error: errorMessage,
+        code: errorCode,
+        attempt: i + 1,
+        maxRetries: retries,
+      });
+      
       if (i < retries - 1) {
-        logger.info(`Retrying in ${delay}ms...`);
+        const delay = calculateBackoffDelay(i, baseDelay);
+        logger.info(`Retrying in ${delay}ms with exponential backoff + jitter...`);
         await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
-        logger.error("Failed to connect to Database after all retries");
+        logger.error("❌ Failed to connect to MySQL database after all retries", {
+          totalAttempts: retries,
+          lastError: errorMessage,
+          errorCode,
+        });
         throw error;
       }
     }
@@ -40,23 +66,16 @@ const startServer = async () => {
       try {
         await connectDatabase();
       } catch (error) {
-        logger.error(
-          "Database connection failed. The app will continue with in-memory storage.",
-          error
-        );
-        logger.info(
-          "To use database, ensure MySQL is running and environment variables are set correctly."
-        );
+        logger.error("Database connection failed. The app will continue with in-memory storage.", error);
+        logger.info("To use database, ensure MySQL is running and environment variables are set correctly.");
       }
     } else {
-      logger.info(
-        "⚠️  No database configuration found, using in-memory storage"
-      );
+      logger.info("⚠️  No database configuration found, using in-memory storage");
     }
 
     // Start the server after database is ready
     const server = app.listen(env.PORT, () => {
-      logger.info(`Battleship API running on port ${env.PORT}`, {
+      logger.info(`Battleship API running on port ${env.PORT}`, { 
         port: env.PORT,
         environment: env.NODE_ENV,
       });
@@ -65,16 +84,16 @@ const startServer = async () => {
     // Graceful shutdown handling
     const gracefulShutdown = (signal: string) => {
       logger.info(`Received ${signal}, starting graceful shutdown...`);
-
+      
       server.close(async () => {
         logger.info("Server closed successfully");
-
+        
         // Close database connection
         if (AppDataSource.isInitialized) {
           await AppDataSource.destroy();
           logger.info("Database connection closed");
         }
-
+        
         process.exit(0);
       });
 
@@ -106,3 +125,4 @@ const startServer = async () => {
 };
 
 startServer();
+

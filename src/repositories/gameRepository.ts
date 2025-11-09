@@ -1,6 +1,7 @@
 // Database logic (SQLite or in-memory)
 import { AppDataSource } from "../config/database";
 import { Game } from "../models/Game";
+import * as cacheService from "../services/cacheService";
 
 const gameRepo = AppDataSource.getRepository(Game);
 
@@ -21,6 +22,13 @@ export const getGamesByStatus = async (
   page: number = 1,
   limit: number = 10
 ): Promise<PaginatedResult<Game>> => {
+  // Try to get from cache first (cache-aside pattern)
+  const cachedResult = await cacheService.getCachedGameList(status, page, limit);
+  if (cachedResult) {
+    return cachedResult;
+  }
+
+  // Cache miss - get from database
   const where = status ? { status } : {};
   
   // Calculate skip for pagination
@@ -43,7 +51,7 @@ export const getGamesByStatus = async (
   const hasNext = page < totalPages;
   const hasPrev = page > 1;
   
-  return {
+  const result: PaginatedResult<Game> = {
     data,
     pagination: {
       page,
@@ -54,16 +62,33 @@ export const getGamesByStatus = async (
       hasPrev,
     },
   };
+  
+  // Cache the result for future requests
+  await cacheService.cacheGameList(status, page, limit, result);
+  
+  return result;
 };
 
 
 export const getRecentGames = async (): Promise<Game[]> => {
+  // Try to get from cache first (cache-aside pattern)
+  const cachedGames = await cacheService.getCachedRecentGames();
+  if (cachedGames) {
+    return cachedGames;
+  }
+
+  // Cache miss - get from database
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return await gameRepo
+  const games = await gameRepo
     .createQueryBuilder("game")
     .leftJoinAndSelect("game.ships", "ships")
     .where("game.status = :status", { status: "IN_PROGRESS" })
     .andWhere("game.createdAt > :date", { date: twentyFourHoursAgo })
     .orderBy("game.createdAt", "DESC")
     .getMany();
+  
+  // Cache the result for future requests
+  await cacheService.cacheRecentGames(games);
+  
+  return games;
 };

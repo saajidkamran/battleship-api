@@ -9,10 +9,16 @@ const corsOrigins = env.CORS_ORIGIN
   : ["http://localhost:5173"];
 
 export const securityMiddleware = [
-  helmet(),
+  helmet({
+    // Production-ready security headers
+    contentSecurityPolicy: process.env.NODE_ENV === "production" ? undefined : false,
+    crossOriginEmbedderPolicy: false, // Allow embedding if needed
+  }),
   cors({
     origin: corsOrigins,
-    methods: ["GET", "POST"],
+    methods: ["GET", "POST", "DELETE"], // Include DELETE for delete endpoints
+    allowedHeaders: ["Content-Type", "Idempotency-Key"],
+    credentials: false, // Set to true if using cookies/auth
   }),
   express.json({ limit: "1kb" }), // limit request body
 ];

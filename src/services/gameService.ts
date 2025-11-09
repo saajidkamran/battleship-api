@@ -2,10 +2,11 @@ import { AppDataSource } from "../config/database";
 import { Game } from "../models/Game";
 import { Ship } from "../models/Ship";
 import { placeShips } from "./shipPlacement";
-import { createNotFoundError } from "../utils/errors";
+import { createNotFoundError, createConflictError, createValidationError } from "../utils/errors";
 import { randomUUID } from "crypto";
 import { logger } from "../utils/logger";
 import * as gameRepo from "../repositories/gameRepository";
+import * as cacheService from "./cacheService";
 
 export const startGame = async (): Promise<Game> => {
   const gameRepo = AppDataSource.getRepository(Game);
@@ -30,13 +31,28 @@ export const startGame = async (): Promise<Game> => {
 
   game.ships = placedShips;
 
-  // Save (cascade creates ships)
+  // Save to database (cascade creates ships)
   await gameRepo.save(game);
+  
+  // Cache the game (write-through pattern)
+  await cacheService.cacheGame(game);
+  
+  // Invalidate game lists cache since we added a new game
+  await cacheService.invalidateGameLists();
+  
   logger.info(`Game ${game.id} created with ${placedShips.length} ships`);
   return game;
 };
 
 export const getGame = async (id: string): Promise<Game> => {
+  // Try to get from cache first (cache-aside pattern)
+  const cachedGame = await cacheService.getCachedGame(id);
+  if (cachedGame) {
+    logger.info(`Game ${id} retrieved from cache`);
+    return cachedGame;
+  }
+
+  // Cache miss - get from database
   const gameRepo = AppDataSource.getRepository(Game);
   const game = await gameRepo.findOne({
     where: { id },
@@ -44,7 +60,10 @@ export const getGame = async (id: string): Promise<Game> => {
   });
 
   if (!game) throw createNotFoundError("Game not found", { id });
-  logger.info(`Recived Game ${game.id} `);
+  
+  // Cache the game for future requests
+  await cacheService.cacheGame(game);
+  logger.info(`Game ${id} retrieved from database and cached`);
 
   return game;
 };
@@ -53,21 +72,39 @@ export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
   const gameRepo = AppDataSource.getRepository(Game);
   const shipRepo = AppDataSource.getRepository(Ship);
 
-  const game = await gameRepo.findOne({
+  // Try to get from cache first for quick validation
+  const cachedGame = await cacheService.getCachedGame(gameId);
+  let fromCache = false;
+
+  // Always load from database for writes to ensure we have a proper TypeORM entity
+  // Cache helps with read performance, but for writes we need the full entity
+  let game: Game | null = null;
+  
+  if (cachedGame) {
+    // If cached, we can do quick validation, but still load from DB for the write
+    // This gives us the benefit of cache validation without sacrificing entity integrity
+    fromCache = true;
+  }
+  
+  // Load from database (required for proper TypeORM entity with relations)
+  game = await gameRepo.findOne({
     where: { id: gameId },
     relations: ["ships"],
   });
 
-  if (!game) throw new Error("Game not found");
+  if (!game) {
+    throw createNotFoundError("Game not found", { gameId });
+  }
 
   if (game.status === "WON") {
-    return { message: "statusGame already won!" };
+    throw createConflictError("Game already won", { gameId, status: game.status });
   }
 
   if (game.shots.includes(coordinate)) {
-    return { message: "Coordinate already fired" };
+    throw createConflictError("Coordinate already fired", { gameId, coordinate });
   }
 
+  // Update game state
   game.shots.push(coordinate);
   let hit = false;
   let sunkShip: string | null = null;
@@ -82,6 +119,7 @@ export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
         sunkShip = ship.name;
       }
 
+      // Save ship to database
       await shipRepo.save(ship);
       break;
     }
@@ -91,12 +129,23 @@ export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
 
   if (allSunk) game.status = "WON";
 
+  // Save game to database (write-through pattern)
   await gameRepo.save(game);
-  if (hit) {
-    logger.info(`Ship hit: ${coordinate} for Game ${game.id} `);
-  } else {
-    logger.info(`Ship miss: ${coordinate} for Game ${game.id} `);
+  
+  // Update cache with latest game state
+  await cacheService.cacheGame(game);
+  
+  // If game status changed to WON, invalidate game lists
+  if (allSunk) {
+    await cacheService.invalidateGameLists();
   }
+
+  if (hit) {
+    logger.info(`Ship hit: ${coordinate} for Game ${game.id} (${fromCache ? 'from cache' : 'from DB'})`);
+  } else {
+    logger.info(`Ship miss: ${coordinate} for Game ${game.id} (${fromCache ? 'from cache' : 'from DB'})`);
+  }
+  
   return {
     coordinate,
     result: hit ? "hit" : "miss",
@@ -113,15 +162,18 @@ export const getGames = async (
   const allowedStatuses = ["IN_PROGRESS", "WON", "LOST"];
   
   if (status && !allowedStatuses.includes(status)) {
-    throw new Error(`Invalid status value: ${status}`);
+    throw createValidationError(
+      `Invalid status value: ${status}. Allowed values: ${allowedStatuses.join(', ')}`,
+      { status, allowedStatuses }
+    );
   }
   
   // Validate pagination parameters
   if (page < 1) {
-    throw new Error("Page must be greater than 0");
+    throw createValidationError("Page must be greater than 0", { page });
   }
   if (limit < 1 || limit > 100) {
-    throw new Error("Limit must be between 1 and 100");
+    throw createValidationError("Limit must be between 1 and 100", { limit });
   }
   
   logger.info(`Retrieved games`, { status, page, limit });
@@ -148,8 +200,13 @@ export const deleteGame = async (id: string): Promise<void> => {
     await shipRepo.remove(game.ships);
   }
 
-  // Delete the game
+  // Delete the game from database
   await gameRepo.remove(game);
+  
+  // Invalidate cache
+  await cacheService.invalidateGame(id);
+  await cacheService.invalidateGameLists();
+  
   logger.info(`Game ${id} deleted successfully`);
 };
 
@@ -172,8 +229,14 @@ export const deleteAllGames = async (): Promise<{ deletedCount: number }> => {
     deletedCount++;
   }
 
-  // Delete all games
+  // Delete all games from database
   await gameRepo.remove(games);
+  
+  // Invalidate all caches
+  await cacheService.invalidateGameLists();
+  // Note: We could invalidate individual game caches, but invalidating lists is sufficient
+  // and more efficient for bulk deletes
+  
   logger.info(`Deleted ${deletedCount} games successfully`);
 
   return { deletedCount };

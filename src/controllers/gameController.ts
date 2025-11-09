@@ -1,10 +1,12 @@
 // # Handles HTTP requests/responses
 import { Request, Response, NextFunction } from "express";
 import * as gameService from "../services/gameService";
+import { createNotFoundError } from "../utils/errors";
+import { logger } from "../utils/logger";
 
 export const startGame = (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log("Starting new game...")
+    logger.info("Starting new game", { requestId: req.requestId });
     const game = gameService.startGame();
     res.status(201).json({
       message: "New game started.",
@@ -19,10 +21,14 @@ export const startGame = (req: Request, res: Response, next: NextFunction) => {
 
 export const fire = (req: Request, res: Response, next: NextFunction) => {
   try {
-    // TODO:Validate the id is valid 
     const { id } = req.params;
-    // TODO:Sanitize the id is valid 
     const { coordinate } = req.body;
+
+    logger.info("Firing at coordinate", {
+      requestId: req.requestId,
+      gameId: id,
+      coordinate,
+    });
 
     const result = gameService.fireAtCoordinate(id, coordinate);
     res.status(200).json(result);
@@ -35,7 +41,11 @@ export const getGameState = (req: Request, res: Response, next: NextFunction) =>
   try {
     const { id } = req.params;
     const game = gameService.getGame(id);
-    if (!game) return res.status(404).json({ error: "Game not found" });
+    
+    if (!game) {
+      throw createNotFoundError("Game not found", { gameId: id });
+    }
+
     res.json({
       gameId: game.id,
       status: game.status,

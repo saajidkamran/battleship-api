@@ -1,7 +1,8 @@
 //  # Core game logic (ship placement, hit/miss)
 import { Game } from "../models/gameTypes";
-import { placeShips } from "../utils/shipPlacement";
+import { placeShips } from "./shipPlacement";
 import { randomUUID } from "crypto";
+import { createNotFoundError, createConflictError } from "../utils/errors";
 
 const games: Map<string, Game> = new Map();
 
@@ -26,12 +27,17 @@ export const getGame = (id: string): Game | undefined => {
 
 export const fireAtCoordinate = (gameId: string, coordinate: string) => {
   const game = games.get(gameId);
-  if (!game) throw new Error("Game not found");
-  if (game.status === "WON") return { message: "Congratulations! You have already won" };
+  if (!game) {
+    throw createNotFoundError("Game not found", { gameId });
+  }
+  
+  if (game.status === "WON") {
+    throw createConflictError("Game has already been won", { gameId, status: game.status });
+  }
 
   // Prevent duplicate shots
   if (game.shots.includes(coordinate)) {
-    return { message: "Coordinate already fired", coordinate };
+    throw createConflictError("Coordinate already fired", { coordinate, gameId });
   }
 
   game.shots.push(coordinate);
@@ -63,9 +69,4 @@ export const fireAtCoordinate = (gameId: string, coordinate: string) => {
     sunk: sunkShip,
     gameStatus: game.status,
   };
-};
-// --- test hooks (only used by Jest) ---
-export const __test__ = {
-  _games: () => games,
-  _reset: () => games.clear()
 };

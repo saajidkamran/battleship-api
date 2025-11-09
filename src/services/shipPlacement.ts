@@ -1,5 +1,6 @@
 import { Ship } from "../models/gameTypes";
 import crypto from "crypto";
+import { logger } from "../utils/logger";
 
 const ROWS = "ABCDEFGHIJ".split(""); // → ['A','B','C','D','E','F','G','H','I','J']
 
@@ -48,6 +49,8 @@ export function placeShips(): Ship[] {
       }
     }
   }
-  console.log("SHIP CORDINATES", ships);
+
+  logger.info("Placed ships", { ships });
+  
   return ships;
 }

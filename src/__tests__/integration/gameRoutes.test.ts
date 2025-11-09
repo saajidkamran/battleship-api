@@ -1,33 +1,11 @@
 import request from "supertest";
 import app from "../../app";
+import { mockShips } from "../helpers/testMocks";
+
 let gameId: string;
-jest.mock("../../utils/shipPlacement", () => ({
-  placeShips: () => [
-    {
-      id: "ship-1",
-      name: "Battleship",
-      size: 2,
-      positions: ["A1", "A2"],
-      hits: [],
-      isSunk: false,
-    },
-    {
-      id: "ship-2",
-      name: "Destroyer",
-      size: 3,
-      positions: ["B1", "B2", "B3"],
-      hits: [],
-      isSunk: false,
-    },
-    {
-      id: "ship-3",
-      name: "Submarine",
-      size: 1,
-      positions: ["C1"],
-      hits: [],
-      isSunk: false,
-    },
-  ],
+
+jest.mock("../../services/shipPlacement", () => ({
+  placeShips: () => mockShips,
 }));
 
 beforeAll(async () => {
@@ -112,8 +90,8 @@ describe("POST /api/v1/game/status", () => {
     const newGame = await request(app).post("/api/v1/game/start");
     const gameId = newGame.body.gameId;
 
-    // 2. Fire exactly at known ship positions
-    const hits = ["A1", "A2", "B1", "B2", "B3", "C1"];
+    // 2. Fire exactly at known ship positions (A1, A2, B1, C1)
+    const hits = ["A1", "A2", "B1", "C1"];
 
     for (const coordinate of hits) {
       const res = await request(app)
@@ -121,6 +99,8 @@ describe("POST /api/v1/game/status", () => {
         .set("Idempotency-Key", coordinate)
         .send({ coordinate });
 
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty("result");
       expect(["hit", "miss"]).toContain(res.body.result);
     }
 

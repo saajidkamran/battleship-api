@@ -1,47 +1,73 @@
-//  # Core game logic (ship placement, hit/miss)
-import { Game } from "../models/gameTypes";
+import { AppDataSource } from "../config/database";
+import { Game } from "../models/Game";
+import { Ship } from "../models/Ship";
 import { placeShips } from "./shipPlacement";
+import { createNotFoundError } from "../utils/errors";
 import { randomUUID } from "crypto";
-import { createNotFoundError, createConflictError } from "../utils/errors";
+import { logger } from "../utils/logger";
 
-const games: Map<string, Game> = new Map();
+export const startGame = async (): Promise<Game> => {
+  const gameRepo = AppDataSource.getRepository(Game);
 
-export const startGame = (): Game => {
-  const id = randomUUID();
-  const ships = placeShips();
+  // Create new game
+  const game = new Game();
+  game.id = randomUUID();
+  game.status = "IN_PROGRESS";
+  game.shots = [];
 
-  const newGame: Game = {
-    id,
-    status: "IN_PROGRESS",
-    ships,
-    shots: [],
-  };
+  // Create ships and attach to game
+  const placedShips = placeShips().map((s) => {
+    const ship = new Ship();
+    ship.name = s.name;
+    ship.size = s.positions.length;
+    ship.positions = s.positions;
+    ship.hits = [];
+    ship.isSunk = false;
+    ship.game = game;
+    return ship;
+  });
 
-  games.set(id, newGame);
-  return newGame;
+  game.ships = placedShips;
+
+  // Save (cascade creates ships)
+  await gameRepo.save(game);
+  logger.info(`Game ${game.id} created with ${placedShips.length} ships`);
+  return game;
 };
 
-export const getGame = (id: string): Game | undefined => {
-  return games.get(id);
+export const getGame = async (id: string): Promise<Game> => {
+  const gameRepo = AppDataSource.getRepository(Game);
+  const game = await gameRepo.findOne({
+    where: { id },
+    relations: ["ships"],
+  });
+
+  if (!game) throw createNotFoundError("Game not found", { id });
+  logger.info(`Recived Game ${game.id} `);
+
+  return game;
 };
 
-export const fireAtCoordinate = (gameId: string, coordinate: string) => {
-  const game = games.get(gameId);
-  if (!game) {
-    throw createNotFoundError("Game not found", { gameId });
-  }
-  
+export const fireAtCoordinate = async (gameId: string, coordinate: string) => {
+  const gameRepo = AppDataSource.getRepository(Game);
+  const shipRepo = AppDataSource.getRepository(Ship);
+
+  const game = await gameRepo.findOne({
+    where: { id: gameId },
+    relations: ["ships"],
+  });
+
+  if (!game) throw new Error("Game not found");
+
   if (game.status === "WON") {
-    throw createConflictError("Game has already been won", { gameId, status: game.status });
+    return { message: "Game already won!" };
   }
 
-  // Prevent duplicate shots
   if (game.shots.includes(coordinate)) {
-    throw createConflictError("Coordinate already fired", { coordinate, gameId });
+    return { message: "Coordinate already fired" };
   }
 
   game.shots.push(coordinate);
-
   let hit = false;
   let sunkShip: string | null = null;
 
@@ -49,20 +75,27 @@ export const fireAtCoordinate = (gameId: string, coordinate: string) => {
     if (ship.positions.includes(coordinate)) {
       hit = true;
       ship.hits.push(coordinate);
-      if (ship.hits.length === ship.size) {
+
+      if (ship.hits.length >= ship.size) {
         ship.isSunk = true;
         sunkShip = ship.name;
       }
+
+      await shipRepo.save(ship);
       break;
     }
   }
 
-  // Check if all ships are sunk
-  const allSunk = game.ships.every((s) => s.isSunk);
-  if (allSunk) {
-    game.status = "WON";
-  }
+  const allSunk = game.ships.length > 0 && game.ships.every((s) => s.isSunk);
+  
+  if (allSunk) game.status = "WON";
 
+  await gameRepo.save(game);
+  if (hit) {
+    logger.info(`Ship hit: ${coordinate} for Game ${game.id} `);
+  } else {
+    logger.info(`Ship miss: ${coordinate} for Game ${game.id} `);
+  }
   return {
     coordinate,
     result: hit ? "hit" : "miss",

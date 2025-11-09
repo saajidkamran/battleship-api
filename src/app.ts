@@ -5,7 +5,9 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { requestIdMiddleware } from "./middlewares/requestId";
 import gameRoutes from "./routes/v1/gameRoutes";
 import healthRoutes from "./routes/v1/healthRoutes";
+import dotenv from "dotenv";
 
+dotenv.config();
 const app = express();
 
 // ---Middlewares ---

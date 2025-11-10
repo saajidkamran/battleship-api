@@ -1,5 +1,6 @@
 import request from "supertest";
 import app from "../../app";
+import { AppDataSource } from "../../config/database";
 import { mockShips } from "../helpers/testMocks";
 
 let gameId: string;
@@ -9,8 +10,40 @@ jest.mock("../../services/shipPlacement", () => ({
 }));
 
 beforeAll(async () => {
+  // Initialize database connection if not already initialized
+  if (!AppDataSource.isInitialized) {
+    try {
+      await AppDataSource.initialize();
+    } catch (error) {
+      // Database might not be available - skip integration tests
+      console.warn("Database not available, skipping integration tests");
+      (global as any).__SKIP_DB_TESTS__ = true;
+      return;
+    }
+  }
+
+  // Skip if database is not available
+  if ((global as any).__SKIP_DB_TESTS__) {
+    return;
+  }
+
   const res = await request(app).post("/api/v1/game/start");
   gameId = res.body.gameId;
+});
+
+afterAll(async () => {
+  if ((global as any).__SKIP_DB_TESTS__) {
+    return;
+  }
+
+  if (AppDataSource.isInitialized) {
+    try {
+      await AppDataSource.destroy();
+    } catch (error) {
+      // Ignore destroy errors
+      console.warn("Error destroying database connection:", error);
+    }
+  }
 });
 
 describe("POST /api/v1/game/start", () => {

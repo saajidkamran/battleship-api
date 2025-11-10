@@ -1,4 +1,3 @@
-// Shared test mocks and utilities
 import { Ship } from "../../utils/gameTypes";
 
 /**
@@ -33,26 +32,17 @@ export const mockShips: Ship[] = [
   },
 ];
 
-/**
- * Mock function for placeShips used in tests
- * Returns deterministic ship positions for testing
- */
+
 export const mockPlaceShips = () => mockShips;
 
-/**
- * Game service functions type
- * Using 'any' for test helpers to avoid TypeScript issues with dynamic requires
- */
+
 export interface GameServiceFunctions {
   fireAtCoordinate: (gameId: string, coordinate: string) => any;
   startGame: () => any;
   getGame: (id: string) => any;
 }
 
-/**
- * Sets up isolated modules with mocked ship placement
- * Returns the game service functions for testing
- */
+
 export const setupIsolatedGameService = (): GameServiceFunctions => {
   jest.isolateModules(() => {
     jest.mock("../../services/shipPlacement", () => ({
@@ -60,7 +50,6 @@ export const setupIsolatedGameService = (): GameServiceFunctions => {
     }));
   });
 
-  // Load the service after mocking
   const service = require("../../services/gameService");
   
   return {

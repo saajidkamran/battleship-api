@@ -12,6 +12,7 @@ A RESTful API for playing Battleship game, built with TypeScript, Express.js, an
 - **Error Handling**: Custom error types with proper HTTP status codes
 - **Type Safety**: Full TypeScript implementation
 - **Testing**: Unit and integration tests with Jest
+- **Caching**: Redis caching layer for improved performance (optional)
 
 ## 🛠️ Tech Stack
 
@@ -24,6 +25,8 @@ A RESTful API for playing Battleship game, built with TypeScript, Express.js, an
 - **Rate Limiting**: express-rate-limit
 - **Testing**: Jest, Supertest
 - **Development**: nodemon, ts-node
+- **Caching**: Redis (ioredis)
+- **Database**: MySQL (TypeORM)
 
 ## 📁 Project Structure
 
@@ -35,11 +38,13 @@ battle-ship-api/
 │   │   ├── integration/    # Integration tests
 │   │   └── helpers/        # Test utilities
 │   ├── config/             # Configuration files
-│   │   └── env.ts          # Environment variables
+│   │   ├── env.ts          # Environment variables
+│   │   ├── database.ts     # Database configuration
+│   │   ├── redis.ts        # Redis configuration
+│   │   ├── gracefulShutdown.ts  # Graceful shutdown handlers
+│   │   └── initializeServices.ts # Service initialization
 │   ├── controllers/        # Request handlers
 │   │   └── gameController.ts
-│   ├── db/                 # Database configuration
-│   │   └── knexfile.ts
 │   ├── middlewares/        # Express middlewares
 │   │   ├── errorHandler.ts
 │   │   ├── idempotency.ts
@@ -57,7 +62,8 @@ battle-ship-api/
 │   │       └── healthRoutes.ts
 │   ├── services/           # Business logic
 │   │   ├── gameService.ts
-│   │   └── shipPlacement.ts
+│   │   ├── shipPlacement.ts
+│   │   └── cacheService.ts # Redis cache service
 │   ├── utils/              # Utility functions
 │   │   ├── constants.ts
 │   │   ├── errors.ts
@@ -97,7 +103,25 @@ PORT=3000
 NODE_ENV=development
 LOG_LEVEL=debug
 CORS_ORIGIN=http://localhost:5173
+
+# Database configuration (optional)
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASS=root
+DB_NAME=battleship
+
+# Redis configuration (optional - for caching)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
 ```
+
+   **Note**: You can use Docker Compose to quickly set up MySQL and Redis:
+   ```bash
+   docker-compose up -d
+   ```
 
 4. Build the project:
 ```bash
@@ -384,8 +408,81 @@ Test structure:
 | `NODE_ENV` | Environment (development/production/test) | `development` |
 | `LOG_LEVEL` | Logging level (debug/info/warn/error) | `debug` (dev) / `info` (prod) |
 | `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `http://localhost:5173` |
+| `REDIS_HOST` | Redis server host | `localhost` |
+| `REDIS_PORT` | Redis server port | `6379` |
+| `REDIS_PASSWORD` | Redis password (optional) | - |
+| `REDIS_DB` | Redis database number | `0` |
+| `DB_HOST` | MySQL host | `localhost` |
+| `DB_PORT` | MySQL port | `3306` |
+| `DB_USER` | MySQL username | `root` |
+| `DB_PASS` | MySQL password | `root` |
+| `DB_NAME` | MySQL database name | `battleship` |
 
-## 🎮 Game Rules
+## Caching with Redis
+
+The API includes an optional Redis caching layer to improve performance.
+
+### Caching Strategy
+
+1. **Individual Game Caching (Cache-Aside Pattern)**
+   - Games are cached when retrieved from the database
+   - Cache TTL: 1 hour for active games, 24 hours for completed games
+   - Cache keys: `game:{gameId}`
+
+2. **Game Lists Caching**
+   - Paginated game lists by status are cached
+   - Cache TTL: 5 minutes
+   - Cache keys: `games:status:{status}:page:{page}:limit:{limit}`
+
+3. **Recent Games Caching**
+   - Recent games query is cached
+   - Cache TTL: 1 minute
+   - Cache key: `games:recent`
+
+4. **Write-Through Pattern**
+   - When games are created or updated, cache is updated immediately
+   - Database remains the source of truth
+   - Cache invalidation happens on deletes and status changes
+
+### Benefits
+
+- **Reduced Database Load**: Frequently accessed games are served from cache
+- **Faster Response Times**: Redis is in-memory and much faster than database queries
+- **Scalability**: Redis can handle high read loads efficiently
+- **Resilience**: App continues to work if Redis is unavailable (graceful degradation)
+
+### Setup
+
+1. **Using Docker Compose** (Recommended):
+```bash
+docker-compose up -d redis
+```
+
+2. **Manual Setup**:
+```bash
+# Install Redis (Ubuntu/Debian)
+sudo apt-get install redis-server
+
+# Start Redis
+redis-server
+```
+
+3. **Configure Environment Variables**:
+```bash
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=  # Optional, leave empty if no password
+REDIS_DB=0
+```
+
+
+### Cache Invalidation
+
+- Game cache is invalidated when a game is deleted
+- Game lists are invalidated when games are created, deleted, or status changes
+- Recent games cache is invalidated when new games are created or status changes
+
+## Game Rules
 
 - **Grid Size**: 10x10 (A1 to J10)
 - **Ships**:
@@ -397,11 +494,13 @@ Test structure:
 
 ## Idempotency
 
-The API supports idempotent requests for the `fire` endpoint:
+The API supports idempotent requests for the `fire` endpoint using Redis caching:
 
 1. Include `Idempotency-Key` header with a unique value
-2. If the same key is used again, the cached response is returned
+2. If the same key is used again, the cached response is returned from Redis
 3. Response includes `idempotent: true` flag
+4. Idempotency keys are cached for 24 hours
+5. **Cache Key**: `idempotency:{idempotencyKey}`
 
 **Example:**
 ```bash
@@ -410,6 +509,8 @@ curl -X POST http://localhost:3000/api/v1/game/{gameId}/fire \
   -H "Content-Type: application/json" \
   -d '{"coordinate": "A1"}'
 ```
+
+**Note**: Idempotency is now using Redis (previously in-memory Map) for production-ready distributed caching.
 
 ## Logging
 
@@ -440,7 +541,6 @@ npm test         # Run tests
 
 ## 🎯 Future Improvements
 
-- [ ] Redis for idempotency cache
 - [ ] WebSocket support for real-time updates
 - [ ] Multiplayer support
 - [ ] Game history and statistics

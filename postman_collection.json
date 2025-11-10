@@ -1,0 +1,448 @@
+{
+	"info": {
+		"_postman_id": "battleship-api-collection",
+		"name": "Battleship API",
+		"description": "Complete API collection for Battleship Game API with Redis caching and idempotency support",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/health/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"health",
+								"health"
+							]
+						},
+						"description": "Check if the API is running and healthy"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Game Management",
+			"item": [
+				{
+					"name": "Start New Game",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/start",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"start"
+							]
+						},
+						"description": "Start a new Battleship game. Returns a game ID that you'll use for subsequent requests."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Game State",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/{{gameId}}/state",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"{{gameId}}",
+								"state"
+							],
+							"variable": [
+								{
+									"key": "gameId",
+									"value": "your-game-id-here",
+									"description": "UUID of the game"
+								}
+							]
+						},
+						"description": "Get the current state of a game including status, shots fired, and remaining ships."
+					},
+					"response": []
+				},
+				{
+					"name": "Fire at Coordinate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "fire-{{$randomUUID}}",
+								"description": "Unique key for idempotency. Use same key to test duplicate request handling."
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"coordinate\": \"A1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/{{gameId}}/fire",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"{{gameId}}",
+								"fire"
+							],
+							"variable": [
+								{
+									"key": "gameId",
+									"value": "your-game-id-here",
+									"description": "UUID of the game"
+								}
+							]
+						},
+						"description": "Fire at a coordinate (A1-J10). Requires Idempotency-Key header. Send same request twice with same key to test idempotency."
+					},
+					"response": []
+				},
+				{
+					"name": "Fire at Coordinate (Duplicate - Test Idempotency)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "fire-test-same-key",
+								"description": "Use the SAME key as previous request to test idempotency"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"coordinate\": \"A1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/{{gameId}}/fire",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"{{gameId}}",
+								"fire"
+							],
+							"variable": [
+								{
+									"key": "gameId",
+									"value": "your-game-id-here",
+									"description": "UUID of the game"
+								}
+							]
+						},
+						"description": "Test idempotency by sending the EXACT same request (same Idempotency-Key and coordinate). Should return cached response with idempotent: true"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Game Queries",
+			"item": [
+				{
+					"name": "Get Recent Games",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/recent",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"recent"
+							]
+						},
+						"description": "Get all games with IN_PROGRESS status created in the last 24 hours. Results are cached for 1 minute."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Games",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/status?page=1&limit=10",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"status"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number (default: 1)"
+								},
+								{
+									"key": "limit",
+									"value": "10",
+									"description": "Items per page (default: 10, max: 100)"
+								}
+							]
+						},
+						"description": "Get all games with pagination. Results are cached for 5 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Games by Status - IN_PROGRESS",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/status?status=IN_PROGRESS&page=1&limit=10",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"status"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "IN_PROGRESS",
+									"description": "Filter by status: IN_PROGRESS, WON, or LOST"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get games with IN_PROGRESS status. Results are cached for 5 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Games by Status - WON",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/status?status=WON&page=1&limit=10",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"status"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "WON"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get games with WON status. Results are cached for 5 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Games by Status - LOST",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/status?status=LOST&page=1&limit=10",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"status"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "LOST"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get games with LOST status. Results are cached for 5 minutes."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Game Deletion",
+			"item": [
+				{
+					"name": "Delete Game",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game/{{gameId}}",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game",
+								"{{gameId}}"
+							],
+							"variable": [
+								{
+									"key": "gameId",
+									"value": "your-game-id-here",
+									"description": "UUID of the game to delete"
+								}
+							]
+						},
+						"description": "Delete a specific game by ID. This will also invalidate all related caches."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete All Games",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/api/v1/game",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"api",
+								"v1",
+								"game"
+							]
+						},
+						"description": "Delete all games. This will also invalidate all related caches. Use with caution!"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "gameId",
+			"value": "",
+			"type": "string",
+			"description": "Set this after starting a new game"
+		}
+	]
+}
+

@@ -11,7 +11,7 @@ dotenv.config();
 const app = express();
 
 // ---Middlewares ---
-app.use(express.json());
+// Note: express.json() is included in securityMiddleware, no need to add it twice
 app.use(requestIdMiddleware);
 app.use(securityMiddleware);
 app.use(rateLimiter);

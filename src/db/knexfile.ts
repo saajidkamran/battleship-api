@@ -1,1 +1,0 @@
-//  Knex config (SQLite)

@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { createBadRequestError } from "../utils/errors";
 import { logger } from "../utils/logger";
+import { getCachedIdempotency, cacheIdempotency } from "../services/cacheService";
 
-//TODO:Temporary in-memory cache for demo (later Redis)
-const idempotencyCache = new Map<string, unknown>();
-
-export const idempotencyHandler = (
+export const idempotencyHandler = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -17,20 +15,28 @@ export const idempotencyHandler = (
     throw createBadRequestError("Missing Idempotency-Key header");
   }
 
+  // Try to get cached response from Redis
+  const cachedResponse = await getCachedIdempotency(key);
+  
   // If already processed → return cached response
-  if (idempotencyCache.has(key)) {
-    const cached = idempotencyCache.get(key);
+  if (cachedResponse) {
     logger.info("Idempotent request detected", {
       requestId: req.requestId,
       idempotencyKey: key,
     });
-    return res.status(200).json({ ...(cached as Record<string, unknown>), idempotent: true });
+    return res.status(200).json({ 
+      ...(cachedResponse as Record<string, unknown>), 
+      idempotent: true 
+    });
   }
 
-  // Monkey-patch res.json() to store the result
+  // Monkey-patch res.json() to store the result in Redis
   const originalJson = res.json.bind(res);
   res.json = (body: unknown) => {
-    idempotencyCache.set(key, body);
+    // Cache the response in Redis (fire and forget - don't block response)
+    cacheIdempotency(key, body).catch((error) => {
+      logger.warn("Failed to cache idempotency response", error);
+    });
     return originalJson(body);
   };
 

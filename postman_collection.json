@@ -1,0 +1,201 @@
+{
+	"info": {
+		"_postman_id": "4bda822b-6dbf-4dd5-ad78-518d9aacd600",
+		"name": "battle-ship-api",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32222312",
+		"_collection_link": "https://test44-8758.postman.co/workspace/7cdd652d-d89d-46c7-8718-bb6c61cda2ba/collection/39961848-4bda822b-6dbf-4dd5-ad78-518d9aacd600?action=share&source=collection_link&creator=32222312"
+	},
+	"item": [
+		{
+			"name": "get game according to status",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/v1/game/?status=IN_PROGRESS",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"game",
+						""
+					],
+					"query": [
+						{
+							"key": "status",
+							"value": "IN_PROGRESS"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get the game status",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"coordinate\": \"A5\",\n  \"result\": \"hit\",\n  \"sunk\": null,\n  \"gameStatus\": \"IN_PROGRESS\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/game/ccce5bb1-0f59-472a-ad4e-9e7f8ad987c7/state",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"game",
+						"ccce5bb1-0f59-472a-ad4e-9e7f8ad987c7",
+						"state"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "fire-cordinate",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Idempotency-Key",
+						"value": "D3-123",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"coordinate\": \"D3\",\n  \"result\": \"hit\",\n  \"sunk\": null,\n  \"gameStatus\": \"IN_PROGRESS\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/game/a1275d47-c789-4bc8-917d-09c2b3395ad5/fire",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"game",
+						"a1275d47-c789-4bc8-917d-09c2b3395ad5",
+						"fire"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "start",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/v1/game/start",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"game",
+						"start"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete the  specific game",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"page\": 1,\n  \"limit\": 10\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:3000/api/v1/game/a1275d47-c789-4bc8-917d-09c2b3395ad5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"game",
+						"a1275d47-c789-4bc8-917d-09c2b3395ad5"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "delete all game",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3000/api/v1/game",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"api",
+						"v1",
+						"game"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

@@ -1,5 +1,5 @@
 // Shared test mocks and utilities
-import { Ship } from "../../models/gameTypes";
+import { Ship } from "../../utils/gameTypes";
 
 /**
  * Mock ships data for testing

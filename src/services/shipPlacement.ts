@@ -1,4 +1,4 @@
-import { Ship } from "../models/gameTypes";
+import { Ship } from "../utils/gameTypes";
 import crypto from "crypto";
 import { logger } from "../utils/logger";
 

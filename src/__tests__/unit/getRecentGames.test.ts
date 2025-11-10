@@ -3,7 +3,6 @@ import { getRecentGames } from "../../controllers/gameController";
 import * as gameService from "../../services/gameService";
 import { logger } from "../../utils/logger";
 
-// Mock dependencies
 jest.mock("../../services/gameService");
 jest.mock("../../utils/logger");
 

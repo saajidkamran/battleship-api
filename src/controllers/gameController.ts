@@ -1,4 +1,3 @@
-// src/controllers/gameController.ts
 import { Request, Response, NextFunction } from "express";
 import * as gameService from "../services/gameService";
 import { createNotFoundError } from "../utils/errors";
@@ -69,16 +68,12 @@ export const getGames = async (
   next: NextFunction
 ) => {
   try {
-    // Extract status from query params (production best practice)
-    // Fallback to body for backward compatibility
     const statusInput = (req.query?.status as string) || req.body?.status;
     const status =
       typeof statusInput === "string"
         ? statusInput.trim().toUpperCase()
         : undefined;
 
-    // Extract pagination from query params (production best practice)
-    // Query params are preferred: more RESTful, cacheable, easier to use
     const page = Math.max(
       1,
       parseInt((req.query?.page as string) || "") ||

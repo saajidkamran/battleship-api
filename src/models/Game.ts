@@ -1,5 +1,10 @@
-// src/models/Game.ts
-import { Entity, PrimaryColumn, Column, OneToMany, CreateDateColumn } from "typeorm";
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+} from "typeorm";
 import { Ship } from "./Ship";
 
 @Entity()
@@ -16,7 +21,7 @@ export class Game {
   @CreateDateColumn()
   createdAt!: Date;
 
-  // ✅ Add cascade so ships are automatically persisted
+  // Add cascade so ships are automatically persisted
   @OneToMany(() => Ship, (ship) => ship.game, { cascade: true })
   ships!: Ship[];
 }

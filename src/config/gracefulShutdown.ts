@@ -44,7 +44,6 @@ export const setupGracefulShutdown = (server: Server): void => {
     }, SHUTDOWN_TIMEOUT);
   };
 
-  // Register shutdown handlers
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 };
@@ -53,16 +52,13 @@ export const setupGracefulShutdown = (server: Server): void => {
  * Setup error handlers for uncaught exceptions and unhandled rejections
  */
 export const setupErrorHandlers = (): void => {
-  // Handle uncaught exceptions
   process.on("uncaughtException", (error: Error) => {
     logger.error("Uncaught exception", error);
     process.exit(1);
   });
 
-  // Handle unhandled promise rejections
   process.on("unhandledRejection", (reason: unknown) => {
     logger.error("Unhandled promise rejection", reason);
     process.exit(1);
   });
 };
-

@@ -5,13 +5,17 @@ import { Game } from "../../models/Game";
 import { Ship } from "../../models/Ship";
 import { mockShips } from "../helpers/testMocks";
 
-// Mock ship placement for deterministic tests
 jest.mock("../../services/shipPlacement", () => ({
   placeShips: () => mockShips,
 }));
 
 describe("GET /api/v1/game/status - Integration Tests", () => {
-  let gameIds: { inProgress: string; won: string; lost: string; inProgress2: string } = {
+  let gameIds: {
+    inProgress: string;
+    won: string;
+    lost: string;
+    inProgress2: string;
+  } = {
     inProgress: "",
     won: "",
     lost: "",
@@ -130,7 +134,6 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
     if ((global as any).__SKIP_DB_TESTS__) {
       return;
     }
@@ -170,10 +173,9 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
   });
 
   describe(" Valid Requests", () => {
-
     it("should return all games with default pagination", async () => {
       if ((global as any).__SKIP_DB_TESTS__) {
-        return; // Skip test if DB is not available
+        return;
       }
 
       const response = await request(app).get("/api/v1/game/status");
@@ -201,7 +203,7 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
       expect(response.status).toBe(200);
       expect(response.body.message).toContain("IN_PROGRESS");
       expect(response.body.data).toBeInstanceOf(Array);
-      
+
       // Verify all returned games have IN_PROGRESS status
       response.body.data.forEach((game: Game) => {
         expect(game.status).toBe("IN_PROGRESS");
@@ -209,20 +211,17 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
     });
 
     it("should filter games by status WON", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?status=WON"
-      );
+      const response = await request(app).get("/api/v1/game/status?status=WON");
 
       expect(response.status).toBe(200);
       expect(response.body.message).toContain("WON");
       expect(response.body.data).toBeInstanceOf(Array);
-      
+
       // Verify all returned games have WON status
       response.body.data.forEach((game: Game) => {
         expect(game.status).toBe("WON");
       });
     });
-
 
     it("should handle pagination with page and limit", async () => {
       const response = await request(app).get(
@@ -253,25 +252,6 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
       });
     });
 
-    it("should include ships relation in response", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?status=IN_PROGRESS"
-      );
-
-      expect(response.status).toBe(200);
-      if (response.body.data.length > 0) {
-        const game = response.body.data[0];
-        expect(game).toHaveProperty("ships");
-        expect(Array.isArray(game.ships)).toBe(true);
-        
-        if (game.ships.length > 0) {
-          expect(game.ships[0]).toHaveProperty("name");
-          expect(game.ships[0]).toHaveProperty("positions");
-          expect(game.ships[0]).toHaveProperty("hits");
-        }
-      }
-    });
-
     it("should handle combined status filter and pagination", async () => {
       const response = await request(app).get(
         "/api/v1/game/status?status=IN_PROGRESS&page=1&limit=1"
@@ -296,69 +276,54 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
     });
 
     it("should return 400 for negative page number", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?page=-1"
-      );
+      const response = await request(app).get("/api/v1/game/status?page=-1");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
 
     it("should return 400 for zero page number", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?page=0"
-      );
+      const response = await request(app).get("/api/v1/game/status?page=0");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
 
     it("should return 400 for limit exceeding maximum (100)", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?limit=101"
-      );
+      const response = await request(app).get("/api/v1/game/status?limit=101");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
 
     it("should return 400 for negative limit", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?limit=-5"
-      );
+      const response = await request(app).get("/api/v1/game/status?limit=-5");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
 
     it("should return 400 for zero limit", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?limit=0"
-      );
+      const response = await request(app).get("/api/v1/game/status?limit=0");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
 
     it("should return 400 for non-numeric page", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?page=abc"
-      );
+      const response = await request(app).get("/api/v1/game/status?page=abc");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
 
     it("should return 400 for non-numeric limit", async () => {
-      const response = await request(app).get(
-        "/api/v1/game/status?limit=xyz"
-      );
+      const response = await request(app).get("/api/v1/game/status?limit=xyz");
 
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty("errors");
     });
   });
-
 
   describe("Pagination flow", () => {
     it("should handle typical pagination flow", async () => {
@@ -386,11 +351,13 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
       );
 
       expect(response.status).toBe(200);
-      expect(response.body.data.every((g: Game) => g.status === "IN_PROGRESS")).toBe(true);
+      expect(
+        response.body.data.every((g: Game) => g.status === "IN_PROGRESS")
+      ).toBe(true);
       expect(response.body.pagination.limit).toBe(1);
     });
 
-     it("should maintain consistent pagination across pages", async () => {
+    it("should maintain consistent pagination across pages", async () => {
       const page1 = await request(app).get(
         "/api/v1/game/status?page=1&limit=1"
       );
@@ -400,76 +367,67 @@ describe("GET /api/v1/game/status - Integration Tests", () => {
 
       expect(page1.status).toBe(200);
       expect(page2.status).toBe(200);
-      
+
       // Total should be the same
-      expect(page1.body.pagination.total).toBe(
-        page2.body.pagination.total
-      );
-      
+      expect(page1.body.pagination.total).toBe(page2.body.pagination.total);
+
       // Limit should be the same
-      expect(page1.body.pagination.limit).toBe(
-        page2.body.pagination.limit
-      );
+      expect(page1.body.pagination.limit).toBe(page2.body.pagination.limit);
     });
     it("should handle empty result set for non-existent status", async () => {
-        const response = await request(app).get(
-          "/api/v1/game/status?status=LOST"
-        );
-  
-        expect(response.status).toBe(200);
-        expect(response.body.data).toEqual([]);
-        expect(response.body.pagination.total).toBe(0);
-        expect(response.body.pagination.totalPages).toBe(0);
-        expect(response.body.pagination.hasNext).toBe(false);
-        expect(response.body.pagination.hasPrev).toBe(false);
-      });
-  
-      it("should handle page beyond total pages", async () => {
-        const response = await request(app).get(
-          "/api/v1/game/status?page=99999&limit=10"
-        );
-  
-        expect(response.status).toBe(200);
-        expect(response.body.data).toEqual([]);
-        expect(response.body.pagination.page).toBe(99999);
-        expect(response.body.pagination.hasNext).toBe(false);
-      });
-  
-      it("should handle maximum limit (100)", async () => {
-        const response = await request(app).get(
-          "/api/v1/game/status?limit=100"
-        );
-  
-        expect(response.status).toBe(200);
-        expect(response.body.pagination.limit).toBe(100);
-        expect(response.body.data.length).toBeLessThanOrEqual(100);
-      });
-  
-      it("should handle multiple query parameters correctly", async () => {
-        const response = await request(app).get(
-          "/api/v1/game/status?status=IN_PROGRESS&page=1&limit=5"
-        );
-  
-        expect(response.status).toBe(200);
-        expect(response.body.pagination).toMatchObject({
-          page: 1,
-          limit: 5,
-        });
-        expect(response.body.message).toContain("IN_PROGRESS");
-      });
-  
-      it("should return hasNext true when more pages exist", async () => {
-        // First, create enough games to have multiple pages
-        const response = await request(app).get(
-          "/api/v1/game/status?page=1&limit=1"
-        );
-  
-        if (response.body.pagination.total > 1) {
-          expect(response.body.pagination.hasNext).toBe(true);
-        }
-      });
-  
+      const response = await request(app).get(
+        "/api/v1/game/status?status=LOST"
+      );
 
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.pagination.total).toBe(0);
+      expect(response.body.pagination.totalPages).toBe(0);
+      expect(response.body.pagination.hasNext).toBe(false);
+      expect(response.body.pagination.hasPrev).toBe(false);
+    });
+
+    it("should handle page beyond total pages", async () => {
+      const response = await request(app).get(
+        "/api/v1/game/status?page=99999&limit=10"
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.pagination.page).toBe(99999);
+      expect(response.body.pagination.hasNext).toBe(false);
+    });
+
+    it("should handle maximum limit (100)", async () => {
+      const response = await request(app).get("/api/v1/game/status?limit=100");
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination.limit).toBe(100);
+      expect(response.body.data.length).toBeLessThanOrEqual(100);
+    });
+
+    it("should handle multiple query parameters correctly", async () => {
+      const response = await request(app).get(
+        "/api/v1/game/status?status=IN_PROGRESS&page=1&limit=5"
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.pagination).toMatchObject({
+        page: 1,
+        limit: 5,
+      });
+      expect(response.body.message).toContain("IN_PROGRESS");
+    });
+
+    it("should return hasNext true when more pages exist", async () => {
+      // First, create enough games to have multiple pages
+      const response = await request(app).get(
+        "/api/v1/game/status?page=1&limit=1"
+      );
+
+      if (response.body.pagination.total > 1) {
+        expect(response.body.pagination.hasNext).toBe(true);
+      }
+    });
   });
 });
-

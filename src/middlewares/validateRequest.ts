@@ -27,7 +27,6 @@ export const validateFire = [
 ];
 
 export const validatePagination = [
-  // Query params validation (primary for GET requests)
   query("page")
     .optional()
     .isInt({ min: 1 })
@@ -40,7 +39,6 @@ export const validatePagination = [
     .optional()
     .isIn(["IN_PROGRESS", "WON", "LOST"])
     .withMessage("Status must be one of: IN_PROGRESS, WON, LOST"),
-  // Body params validation (for backward compatibility with POST)
   body("page")
     .optional()
     .isInt({ min: 1 })

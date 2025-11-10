@@ -1,10 +1,9 @@
-// Production-ready logger using Pino
 import pino from "pino";
 import { env } from "../config/env";
 
-// Create Pino logger instance
 const pinoLogger = pino({
-  level: process.env.LOG_LEVEL || (env.NODE_ENV === "production" ? "info" : "debug"),
+  level:
+    process.env.LOG_LEVEL || (env.NODE_ENV === "production" ? "info" : "debug"),
   transport:
     env.NODE_ENV === "development"
       ? {
@@ -24,7 +23,6 @@ const pinoLogger = pino({
   timestamp: pino.stdTimeFunctions.isoTime,
 });
 
-// Wrapper to maintain the same API interface
 const logError = (
   message: string,
   error?: Error | unknown,
@@ -60,7 +58,6 @@ const logDebug = (message: string, meta?: Record<string, unknown>): void => {
   }
 };
 
-// Export logger with the same interface as before
 export const logger = {
   error: logError,
   warn: logWarn,
@@ -68,5 +65,4 @@ export const logger = {
   debug: logDebug,
 };
 
-// Export the underlying Pino logger for advanced usage if needed
 export const pinoLoggerInstance = pinoLogger;

@@ -1,4 +1,3 @@
-// Database logic (SQLite or in-memory)
 import { AppDataSource } from "../config/database";
 import { Game } from "../models/Game";
 import * as cacheService from "../services/cacheService";
@@ -22,21 +21,24 @@ export const getGamesByStatus = async (
   page: number = 1,
   limit: number = 10
 ): Promise<PaginatedResult<Game>> => {
-  // Try to get from cache first (cache-aside pattern)
-  const cachedResult = await cacheService.getCachedGameList(status, page, limit);
+  const cachedResult = await cacheService.getCachedGameList(
+    status,
+    page,
+    limit
+  );
   if (cachedResult) {
     return cachedResult;
   }
 
   // Cache miss - get from database
   const where = status ? { status } : {};
-  
+
   // Calculate skip for pagination
   const skip = (page - 1) * limit;
-  
+
   // Get total count
   const total = await gameRepo.count({ where });
-  
+
   // Get paginated results
   const data = await gameRepo.find({
     where,
@@ -45,12 +47,12 @@ export const getGamesByStatus = async (
     skip,
     take: limit,
   });
-  
+
   // Calculate pagination metadata
   const totalPages = Math.ceil(total / limit);
   const hasNext = page < totalPages;
   const hasPrev = page > 1;
-  
+
   const result: PaginatedResult<Game> = {
     data,
     pagination: {
@@ -62,13 +64,12 @@ export const getGamesByStatus = async (
       hasPrev,
     },
   };
-  
+
   // Cache the result for future requests
   await cacheService.cacheGameList(status, page, limit, result);
-  
+
   return result;
 };
-
 
 export const getRecentGames = async (): Promise<Game[]> => {
   // Try to get from cache first (cache-aside pattern)
@@ -86,9 +87,9 @@ export const getRecentGames = async (): Promise<Game[]> => {
     .andWhere("game.createdAt > :date", { date: twentyFourHoursAgo })
     .orderBy("game.createdAt", "DESC")
     .getMany();
-  
+
   // Cache the result for future requests
   await cacheService.cacheRecentGames(games);
-  
+
   return games;
 };

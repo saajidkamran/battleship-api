@@ -5,14 +5,12 @@ import { Game } from "../../models/Game";
 import { Ship } from "../../models/Ship";
 import { mockShips } from "../helpers/testMocks";
 
-// Mock ship placement for deterministic tests
 jest.mock("../../services/shipPlacement", () => ({
   placeShips: () => mockShips,
 }));
 
 describe("DELETE /api/v1/game - Integration Tests", () => {
   beforeAll(async () => {
-    // Initialize database connection if not already initialized
     if (!AppDataSource.isInitialized) {
       try {
         await AppDataSource.initialize();
@@ -25,7 +23,6 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
     if ((global as any).__SKIP_DB_TESTS__) {
       return;
     }
@@ -50,7 +47,6 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
         // Ignore cleanup errors
       }
 
-      // Close database connection to allow Jest to exit
       try {
         await AppDataSource.destroy();
       } catch (error) {
@@ -75,9 +71,15 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
       const gameId3 = game3.body.gameId;
 
       // Verify games exist
-      const beforeDelete1 = await request(app).get(`/api/v1/game/${gameId1}/state`);
-      const beforeDelete2 = await request(app).get(`/api/v1/game/${gameId2}/state`);
-      const beforeDelete3 = await request(app).get(`/api/v1/game/${gameId3}/state`);
+      const beforeDelete1 = await request(app).get(
+        `/api/v1/game/${gameId1}/state`
+      );
+      const beforeDelete2 = await request(app).get(
+        `/api/v1/game/${gameId2}/state`
+      );
+      const beforeDelete3 = await request(app).get(
+        `/api/v1/game/${gameId3}/state`
+      );
 
       expect(beforeDelete1.status).toBe(200);
       expect(beforeDelete2.status).toBe(200);
@@ -87,14 +89,23 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
       const response = await request(app).delete("/api/v1/game");
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("message", "All games deleted successfully");
+      expect(response.body).toHaveProperty(
+        "message",
+        "All games deleted successfully"
+      );
       expect(response.body).toHaveProperty("deletedCount");
       expect(response.body.deletedCount).toBeGreaterThanOrEqual(3);
 
       // Verify all games are deleted
-      const afterDelete1 = await request(app).get(`/api/v1/game/${gameId1}/state`);
-      const afterDelete2 = await request(app).get(`/api/v1/game/${gameId2}/state`);
-      const afterDelete3 = await request(app).get(`/api/v1/game/${gameId3}/state`);
+      const afterDelete1 = await request(app).get(
+        `/api/v1/game/${gameId1}/state`
+      );
+      const afterDelete2 = await request(app).get(
+        `/api/v1/game/${gameId2}/state`
+      );
+      const afterDelete3 = await request(app).get(
+        `/api/v1/game/${gameId3}/state`
+      );
 
       expect(afterDelete1.status).toBe(404);
       expect(afterDelete2.status).toBe(404);
@@ -113,7 +124,10 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
       const response = await request(app).delete("/api/v1/game");
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("message", "All games deleted successfully");
+      expect(response.body).toHaveProperty(
+        "message",
+        "All games deleted successfully"
+      );
       expect(response.body).toHaveProperty("deletedCount", 0);
     });
 
@@ -127,7 +141,9 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
       const gameId = createResponse.body.gameId;
 
       // Verify game has ships
-      const beforeDelete = await request(app).get(`/api/v1/game/${gameId}/state`);
+      const beforeDelete = await request(app).get(
+        `/api/v1/game/${gameId}/state`
+      );
       expect(beforeDelete.status).toBe(200);
       expect(beforeDelete.body.remainingShips).toBeGreaterThan(0);
 
@@ -147,4 +163,3 @@ describe("DELETE /api/v1/game - Integration Tests", () => {
     });
   });
 });
-

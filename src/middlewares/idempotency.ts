@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { createBadRequestError } from "../utils/errors";
 import { logger } from "../utils/logger";
-import { getCachedIdempotency, cacheIdempotency } from "../services/cacheService";
+import {
+  getCachedIdempotency,
+  cacheIdempotency,
+} from "../services/cacheService";
 
 export const idempotencyHandler = async (
   req: Request,
@@ -10,23 +13,20 @@ export const idempotencyHandler = async (
 ) => {
   const key = req.header("Idempotency-Key");
 
-  // Require key
   if (!key) {
     throw createBadRequestError("Missing Idempotency-Key header");
   }
 
-  // Try to get cached response from Redis
   const cachedResponse = await getCachedIdempotency(key);
-  
-  // If already processed → return cached response
+
   if (cachedResponse) {
     logger.info("Idempotent request detected", {
       requestId: req.requestId,
       idempotencyKey: key,
     });
-    return res.status(200).json({ 
-      ...(cachedResponse as Record<string, unknown>), 
-      idempotent: true 
+    return res.status(200).json({
+      ...(cachedResponse as Record<string, unknown>),
+      idempotent: true,
     });
   }
 

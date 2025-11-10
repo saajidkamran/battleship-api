@@ -1,4 +1,3 @@
-// Custom error types and factory functions for better error handling
 export interface AppError extends Error {
   statusCode: number;
   isOperational: boolean;

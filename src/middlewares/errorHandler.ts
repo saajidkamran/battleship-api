@@ -2,7 +2,6 @@ import { Request, Response, NextFunction } from "express";
 import { AppError, isAppError } from "../utils/errors";
 import { logger } from "../utils/logger";
 
-// Extend Request to include requestId
 declare global {
   namespace Express {
     interface Request {
@@ -53,7 +52,9 @@ export const errorHandler = (
       error: {
         message: "Validation failed",
         code: "VALIDATION_ERROR",
-        ...(isDevelopment ? { details: (err as { errors?: unknown }).errors } : {}),
+        ...(isDevelopment
+          ? { details: (err as { errors?: unknown }).errors }
+          : {}),
         ...(isDevelopment ? { requestId } : {}),
       },
     });

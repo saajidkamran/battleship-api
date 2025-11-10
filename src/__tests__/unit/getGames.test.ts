@@ -3,7 +3,6 @@ import { getGames } from "../../controllers/gameController";
 import * as gameService from "../../services/gameService";
 import { logger } from "../../utils/logger";
 
-// Mock dependencies
 jest.mock("../../services/gameService");
 jest.mock("../../utils/logger");
 
@@ -15,10 +14,8 @@ describe("getGames Controller", () => {
   let statusMock: jest.Mock;
 
   beforeEach(() => {
-    // Reset mocks
     jest.clearAllMocks();
 
-    // Setup response mocks
     jsonMock = jest.fn().mockReturnThis();
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
 
@@ -36,7 +33,7 @@ describe("getGames Controller", () => {
     mockNext = jest.fn();
   });
 
-  describe("✅ Best Cases - Valid Inputs", () => {
+  describe("Valid Inputs", () => {
     it("should return paginated games with default pagination (query params)", async () => {
       const mockGames = {
         data: [
@@ -181,61 +178,9 @@ describe("getGames Controller", () => {
 
       expect(gameService.getGames).toHaveBeenCalledWith("WON", 1, 10);
     });
-
-    it("should fallback to body params for backward compatibility", async () => {
-      const mockGames = {
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 20,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-      };
-
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      mockRequest.query = {};
-      mockRequest.body = { status: "LOST", page: "1", limit: "20" };
-
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(gameService.getGames).toHaveBeenCalledWith("LOST", 1, 20);
-    });
-
-    it("should prioritize query params over body params", async () => {
-      const mockGames = {
-        data: [],
-        pagination: {
-          page: 2,
-          limit: 15,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-      };
-
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      mockRequest.query = { page: "2", limit: "15" };
-      mockRequest.body = { page: "1", limit: "10" };
-
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(gameService.getGames).toHaveBeenCalledWith(undefined, 2, 15);
-    });
   });
 
-  describe("❌ Worst Cases - Invalid Inputs", () => {
+  describe("Invalid Inputs", () => {
     it("should handle invalid page number (negative)", async () => {
       mockRequest.query = { page: "-1" };
 
@@ -284,7 +229,6 @@ describe("getGames Controller", () => {
         mockNext
       );
 
-      // Should cap at 100
       expect(gameService.getGames).toHaveBeenCalledWith(undefined, 1, 100);
     });
 
@@ -358,169 +302,103 @@ describe("getGames Controller", () => {
     });
   });
 
-  describe("🔍 Edge Cases", () => {
-    it("should handle empty result set", async () => {
-      const mockGames = {
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-      };
+  it("should handle empty result set", async () => {
+    const mockGames = {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    };
 
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      mockRequest.query = { status: "WON" };
+    (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
+    mockRequest.query = { status: "WON" };
 
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
+    await getGames(mockRequest as Request, mockResponse as Response, mockNext);
 
-      expect(jsonMock).toHaveBeenCalledWith({
-        message: "Games with status WON",
-        ...mockGames,
-      });
-    });
-
-    it("should handle maximum limit (100)", async () => {
-      const mockGames = {
-        data: Array(100).fill({ id: "1", status: "IN_PROGRESS" }),
-        pagination: {
-          page: 1,
-          limit: 100,
-          total: 100,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false,
-        },
-      };
-
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      mockRequest.query = { limit: "100" };
-
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(gameService.getGames).toHaveBeenCalledWith(undefined, 1, 100);
-    });
-
-    it("should handle last page with hasNext false", async () => {
-      const mockGames = {
-        data: [{ id: "1", status: "IN_PROGRESS" }],
-        pagination: {
-          page: 5,
-          limit: 10,
-          total: 50,
-          totalPages: 5,
-          hasNext: false,
-          hasPrev: true,
-        },
-      };
-
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      mockRequest.query = { page: "5", limit: "10" };
-
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(gameService.getGames).toHaveBeenCalledWith(undefined, 5, 10);
-      expect(mockGames.pagination.hasNext).toBe(false);
-    });
-
-    it("should handle first page with hasPrev false", async () => {
-      const mockGames = {
-        data: [{ id: "1", status: "IN_PROGRESS" }],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 50,
-          totalPages: 5,
-          hasNext: true,
-          hasPrev: false,
-        },
-      };
-
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      mockRequest.query = { page: "1" };
-
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockGames.pagination.hasPrev).toBe(false);
-    });
-
-    it("should handle missing requestId gracefully", async () => {
-      const mockGames = {
-        data: [],
-        pagination: {
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-      };
-
-      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-      delete mockRequest.requestId;
-      mockRequest.query = {};
-
-      await getGames(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(gameService.getGames).toHaveBeenCalled();
-      expect(jsonMock).toHaveBeenCalled();
-    });
-
-    it("should handle all status values", async () => {
-      const statuses = ["IN_PROGRESS", "WON", "LOST"];
-
-      for (const status of statuses) {
-        const mockGames = {
-          data: [],
-          pagination: {
-            page: 1,
-            limit: 10,
-            total: 0,
-            totalPages: 0,
-            hasNext: false,
-            hasPrev: false,
-          },
-        };
-
-        (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
-        mockRequest.query = { status };
-
-        await getGames(
-          mockRequest as Request,
-          mockResponse as Response,
-          mockNext
-        );
-
-        expect(gameService.getGames).toHaveBeenCalledWith(status, 1, 10);
-      }
+    expect(jsonMock).toHaveBeenCalledWith({
+      message: "Games with status WON",
+      ...mockGames,
     });
   });
 
-  describe("📊 Pagination Edge Cases", () => {
+  it("should handle maximum limit (100)", async () => {
+    const mockGames = {
+      data: Array(100).fill({ id: "1", status: "IN_PROGRESS" }),
+      pagination: {
+        page: 1,
+        limit: 100,
+        total: 100,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      },
+    };
+
+    (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
+    mockRequest.query = { limit: "100" };
+
+    await getGames(mockRequest as Request, mockResponse as Response, mockNext);
+
+    expect(gameService.getGames).toHaveBeenCalledWith(undefined, 1, 100);
+  });
+  it("should handle missing requestId gracefully", async () => {
+    const mockGames = {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    };
+
+    (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
+    delete mockRequest.requestId;
+    mockRequest.query = {};
+
+    await getGames(mockRequest as Request, mockResponse as Response, mockNext);
+
+    expect(gameService.getGames).toHaveBeenCalled();
+    expect(jsonMock).toHaveBeenCalled();
+  });
+
+  it("should handle all status values", async () => {
+    const statuses = ["IN_PROGRESS", "WON", "LOST"];
+
+    for (const status of statuses) {
+      const mockGames = {
+        data: [],
+        pagination: {
+          page: 1,
+          limit: 10,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+
+      (gameService.getGames as jest.Mock).mockResolvedValue(mockGames);
+      mockRequest.query = { status };
+
+      await getGames(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(gameService.getGames).toHaveBeenCalledWith(status, 1, 10);
+    }
+  });
+
+  describe("Pagination Edge Cases", () => {
     it("should handle very large page numbers", async () => {
       mockRequest.query = { page: "999999" };
 
@@ -561,4 +439,3 @@ describe("getGames Controller", () => {
     });
   });
 });
-

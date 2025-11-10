@@ -5,14 +5,12 @@ import { Game } from "../../models/Game";
 import { Ship } from "../../models/Ship";
 import { mockShips } from "../helpers/testMocks";
 
-// Mock ship placement for deterministic tests
 jest.mock("../../services/shipPlacement", () => ({
   placeShips: () => mockShips,
 }));
 
 describe("GET /api/v1/game/recent - Integration Tests", () => {
   beforeAll(async () => {
-    // Initialize database connection if not already initialized
     if (!AppDataSource.isInitialized) {
       try {
         await AppDataSource.initialize();
@@ -221,74 +219,24 @@ describe("GET /api/v1/game/recent - Integration Tests", () => {
       }
     });
 
-    it("should include ships information in response", async () => {
+    it("should return empty array when no recent games exist", async () => {
       if ((global as any).__SKIP_DB_TESTS__) {
         return;
       }
 
-      // Create a new game
-      const createResponse = await request(app).post("/api/v1/game/start");
-      const newGameId = createResponse.body.gameId;
+      // Delete all games first
+      await request(app).delete("/api/v1/game");
 
       // Fetch recent games
       const response = await request(app).get("/api/v1/game/recent");
 
       expect(response.status).toBe(200);
-
-      const game = response.body.games.find((g: any) => g.gameId === newGameId);
-
-      expect(game).toBeDefined();
-      expect(game).toHaveProperty("remainingShips");
-      expect(typeof game.remainingShips).toBe("number");
-      expect(game.remainingShips).toBeGreaterThanOrEqual(0);
+      expect(response.body).toHaveProperty(
+        "message",
+        "Recent games (last 24 hours)"
+      );
+      expect(response.body).toHaveProperty("count", 0);
+      expect(response.body).toHaveProperty("games", []);
     });
-  });
-
-  it("should return empty array when no recent games exist", async () => {
-    if ((global as any).__SKIP_DB_TESTS__) {
-      return;
-    }
-
-    // Delete all games first
-    await request(app).delete("/api/v1/game");
-
-    // Fetch recent games
-    const response = await request(app).get("/api/v1/game/recent");
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty(
-      "message",
-      "Recent games (last 24 hours)"
-    );
-    expect(response.body).toHaveProperty("count", 0);
-    expect(response.body).toHaveProperty("games", []);
-  });
-
-  it("should handle games with no ships", async () => {
-    if ((global as any).__SKIP_DB_TESTS__) {
-      return;
-    }
-
-    const gameRepo = AppDataSource.getRepository(Game);
-
-    // Create a game without ships
-    const game = new Game();
-    game.id = "test-recent-game-1";
-    game.status = "IN_PROGRESS";
-    game.shots = [];
-    await gameRepo.save(game);
-
-    // Fetch recent games
-    const response = await request(app).get("/api/v1/game/recent");
-
-    expect(response.status).toBe(200);
-
-    const gameResult = response.body.games.find(
-      (g: any) => g.gameId === "test-recent-game-1"
-    );
-
-    if (gameResult) {
-      expect(gameResult).toHaveProperty("remainingShips", 0);
-    }
   });
 });

@@ -5,7 +5,6 @@ import { Game } from "../../models/Game";
 import { Ship } from "../../models/Ship";
 import { mockShips } from "../helpers/testMocks";
 
-// Mock ship placement for deterministic tests
 jest.mock("../../services/shipPlacement", () => ({
   placeShips: () => mockShips,
 }));
@@ -55,7 +54,6 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
     if ((global as any).__SKIP_DB_TESTS__) {
       return;
     }
@@ -80,7 +78,6 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
         // Ignore cleanup errors
       }
 
-      // Close database connection to allow Jest to exit
       try {
         await AppDataSource.destroy();
       } catch (error) {
@@ -103,11 +100,16 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
       const response = await request(app).delete(`/api/v1/game/${newGameId}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("message", "Game deleted successfully");
+      expect(response.body).toHaveProperty(
+        "message",
+        "Game deleted successfully"
+      );
       expect(response.body).toHaveProperty("gameId", newGameId);
 
       // Verify game is deleted
-      const getResponse = await request(app).get(`/api/v1/game/${newGameId}/state`);
+      const getResponse = await request(app).get(
+        `/api/v1/game/${newGameId}/state`
+      );
       expect(getResponse.status).toBe(404);
     });
 
@@ -121,7 +123,9 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
       const newGameId = createResponse.body.gameId;
 
       // Verify game exists with ships
-      const beforeDelete = await request(app).get(`/api/v1/game/${newGameId}/state`);
+      const beforeDelete = await request(app).get(
+        `/api/v1/game/${newGameId}/state`
+      );
       expect(beforeDelete.status).toBe(200);
       expect(beforeDelete.body.remainingShips).toBeGreaterThan(0);
 
@@ -132,7 +136,7 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
       // Verify game and ships are deleted
       const gameRepo = AppDataSource.getRepository(Game);
       const shipRepo = AppDataSource.getRepository(Ship);
-      
+
       const deletedGame = await gameRepo.findOne({ where: { id: newGameId } });
       expect(deletedGame).toBeNull();
 
@@ -148,7 +152,9 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
       }
 
       const nonExistentId = "00000000-0000-0000-0000-000000000000";
-      const response = await request(app).delete(`/api/v1/game/${nonExistentId}`);
+      const response = await request(app).delete(
+        `/api/v1/game/${nonExistentId}`
+      );
 
       expect(response.status).toBe(404);
       expect(response.body).toHaveProperty("error");
@@ -167,4 +173,3 @@ describe("DELETE /api/v1/game/:id - Integration Tests", () => {
     });
   });
 });
-

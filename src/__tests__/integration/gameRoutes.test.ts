@@ -86,11 +86,11 @@ describe("POST /api/v1/game/status", () => {
     expect(res.body.errors[0].msg).toMatch(/Invalid game ID/);
   });
   it("should mark the game as WON after all ships are sunk", async () => {
-    // 1. Start a deterministic game
+    //  Start a deterministic game
     const newGame = await request(app).post("/api/v1/game/start");
     const gameId = newGame.body.gameId;
 
-    // 2. Fire exactly at known ship positions (A1, A2, B1, C1)
+    //  Fire exactly at known ship positions (A1, A2, B1, C1)
     const hits = ["A1", "A2", "B1", "C1"];
 
     for (const coordinate of hits) {
@@ -121,7 +121,7 @@ describe("Rate Limiter Middleware", () => {
       const res = await request(app).post(route);
     }
 
-    // 6th should trigger limiter
+    // should trigger limiter
     const limited = await request(app).post(route);
     expect(limited.status).toBe(429);
     expect(limited.body).toHaveProperty(

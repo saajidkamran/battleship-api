@@ -51,6 +51,6 @@ export function placeShips(): Ship[] {
   }
 
   logger.info("Placed ships", { ships });
-  
+
   return ships;
 }

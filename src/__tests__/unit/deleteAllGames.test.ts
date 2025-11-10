@@ -3,7 +3,6 @@ import { deleteAllGames } from "../../controllers/gameController";
 import * as gameService from "../../services/gameService";
 import { logger } from "../../utils/logger";
 
-// Mock dependencies
 jest.mock("../../services/gameService");
 jest.mock("../../utils/logger");
 
@@ -15,10 +14,8 @@ describe("deleteAllGames Controller", () => {
   let statusMock: jest.Mock;
 
   beforeEach(() => {
-    // Reset mocks
     jest.clearAllMocks();
 
-    // Setup response mocks
     jsonMock = jest.fn().mockReturnThis();
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
 
@@ -90,4 +87,3 @@ describe("deleteAllGames Controller", () => {
     });
   });
 });
-

@@ -12,7 +12,6 @@ const CACHE_KEYS = {
   IDEMPOTENCY: (key: string) => `idempotency:${key}`,
 } as const;
 
-// TTL (Time To Live) in seconds
 const TTL = {
   ACTIVE_GAME: 3600, // 1 hour for active games
   COMPLETED_GAME: 86400, // 24 hours for completed games
@@ -30,14 +29,15 @@ const gameToPlain = (game: Game): any => {
     status: game.status,
     shots: game.shots,
     createdAt: game.createdAt.toISOString(),
-    ships: game.ships?.map((ship) => ({
-      id: ship.id,
-      name: ship.name,
-      size: ship.size,
-      positions: ship.positions,
-      hits: ship.hits,
-      isSunk: ship.isSunk,
-    })) || [],
+    ships:
+      game.ships?.map((ship) => ({
+        id: ship.id,
+        name: ship.name,
+        size: ship.size,
+        positions: ship.positions,
+        hits: ship.hits,
+        isSunk: ship.isSunk,
+      })) || [],
   };
 };
 
@@ -80,7 +80,7 @@ export const cacheGame = async (game: Game): Promise<void> => {
 
     await redisClient.setex(key, ttl, value);
     logger.debug(`Cached game: ${game.id}`, { ttl });
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to cache game", error);
     // Don't throw - cache failures shouldn't break the app
   }
@@ -106,7 +106,7 @@ export const getCachedGame = async (id: string): Promise<Game | null> => {
     const game = plainToGame(parsed);
     logger.debug(`Cache hit for game: ${id}`);
     return game;
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to get game from cache", error);
     return null;
   }
@@ -124,13 +124,14 @@ export const invalidateGame = async (id: string): Promise<void> => {
     const key = CACHE_KEYS.GAME(id);
     await redisClient.del(key);
     logger.debug(`Invalidated game cache: ${id}`);
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to invalidate game cache", error);
   }
 };
 
 /**
  * Invalidate all game list caches (called when games are created/updated/deleted)
+ * Uses SCAN instead of KEYS for production safety (non-blocking)
  */
 export const invalidateGameLists = async (): Promise<void> => {
   if (!isRedisConnected()) {
@@ -138,18 +139,39 @@ export const invalidateGameLists = async (): Promise<void> => {
   }
 
   try {
-    // Get all keys matching the pattern
+    const keysToDelete: string[] = [];
     const pattern = "games:status:*";
-    const keys = await redisClient.keys(pattern);
     const recentGamesKey = CACHE_KEYS.RECENT_GAMES();
 
-    if (keys.length > 0) {
-      await redisClient.del(...keys);
+    // Use SCAN instead of KEYS to avoid blocking Redis in production
+    let cursor = "0";
+    do {
+      const result = await redisClient.scan(
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        100
+      );
+      cursor = result[0];
+      keysToDelete.push(...result[1]);
+    } while (cursor !== "0");
+
+    // Delete all matching keys in batches
+    if (keysToDelete.length > 0) {
+      // Delete in batches of 100 to avoid overwhelming Redis
+      const batchSize = 100;
+      for (let i = 0; i < keysToDelete.length; i += batchSize) {
+        const batch = keysToDelete.slice(i, i + batchSize);
+        await redisClient.del(...batch);
+      }
     }
+    
+    // Delete recent games cache
     await redisClient.del(recentGamesKey);
 
-    logger.debug(`Invalidated ${keys.length} game list cache(s)`);
-  } catch (error:any) {
+    logger.debug(`Invalidated ${keysToDelete.length} game list cache(s)`);
+  } catch (error: any) {
     logger.warn("Failed to invalidate game list cache", error);
   }
 };
@@ -178,7 +200,7 @@ export const cacheGameList = async (
 
     await redisClient.setex(key, TTL.GAME_LIST, value);
     logger.debug(`Cached game list`, { status, page, limit });
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to cache game list", error);
   }
 };
@@ -212,7 +234,7 @@ export const getCachedGameList = async (
 
     logger.debug(`Cache hit for game list`, { status, page, limit });
     return result;
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to get game list from cache", error);
     return null;
   }
@@ -233,7 +255,7 @@ export const cacheRecentGames = async (games: Game[]): Promise<void> => {
 
     await redisClient.setex(key, TTL.RECENT_GAMES, value);
     logger.debug(`Cached recent games`, { count: games.length });
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to cache recent games", error);
   }
 };
@@ -258,7 +280,7 @@ export const getCachedRecentGames = async (): Promise<Game[] | null> => {
     const games = parsed.map((plainGame: any) => plainToGame(plainGame));
     logger.debug(`Cache hit for recent games`);
     return games;
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to get recent games from cache", error);
     return null;
   }
@@ -267,7 +289,10 @@ export const getCachedRecentGames = async (): Promise<Game[] | null> => {
 /**
  * Cache idempotency response
  */
-export const cacheIdempotency = async (key: string, response: unknown): Promise<void> => {
+export const cacheIdempotency = async (
+  key: string,
+  response: unknown
+): Promise<void> => {
   if (!isRedisConnected()) {
     return;
   }
@@ -277,7 +302,7 @@ export const cacheIdempotency = async (key: string, response: unknown): Promise<
     const value = JSON.stringify(response);
     await redisClient.setex(cacheKey, TTL.IDEMPOTENCY, value);
     logger.debug(`Cached idempotency response: ${key}`);
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to cache idempotency response", error);
   }
 };
@@ -285,7 +310,9 @@ export const cacheIdempotency = async (key: string, response: unknown): Promise<
 /**
  * Get idempotency response from cache
  */
-export const getCachedIdempotency = async (key: string): Promise<unknown | null> => {
+export const getCachedIdempotency = async (
+  key: string
+): Promise<unknown | null> => {
   if (!isRedisConnected()) {
     return null;
   }
@@ -301,7 +328,7 @@ export const getCachedIdempotency = async (key: string): Promise<unknown | null>
     const response = JSON.parse(data);
     logger.debug(`Cache hit for idempotency key: ${key}`);
     return response;
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to get idempotency from cache", error);
     return null;
   }
@@ -321,7 +348,7 @@ export const clearIdempotencyKey = async (key: string): Promise<void> => {
     const cacheKey = CACHE_KEYS.IDEMPOTENCY(key);
     await redisClient.del(cacheKey);
     logger.debug(`Cleared idempotency key: ${key}`);
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to clear idempotency key", error);
   }
 };
@@ -331,6 +358,7 @@ export const clearIdempotencyKey = async (key: string): Promise<void> => {
  * Note: Use with caution! This clears all idempotency keys.
  * Normally, keys expire automatically after 24 hours.
  * This function is only needed for maintenance or debugging.
+ * Uses SCAN instead of KEYS for production safety (non-blocking)
  */
 export const clearAllIdempotencyKeys = async (): Promise<number> => {
   if (!isRedisConnected()) {
@@ -339,16 +367,35 @@ export const clearAllIdempotencyKeys = async (): Promise<number> => {
 
   try {
     const pattern = "idempotency:*";
-    const keys = await redisClient.keys(pattern);
-    
-    if (keys.length > 0) {
-      await redisClient.del(...keys);
-      logger.info(`Cleared ${keys.length} idempotency keys`);
-      return keys.length;
+    const keysToDelete: string[] = [];
+    let cursor = "0";
+
+    // Use SCAN instead of KEYS to avoid blocking Redis in production
+    do {
+      const result = await redisClient.scan(
+        cursor,
+        "MATCH",
+        pattern,
+        "COUNT",
+        100
+      );
+      cursor = result[0];
+      keysToDelete.push(...result[1]);
+    } while (cursor !== "0");
+
+    if (keysToDelete.length > 0) {
+      // Delete in batches of 100 to avoid overwhelming Redis
+      const batchSize = 100;
+      for (let i = 0; i < keysToDelete.length; i += batchSize) {
+        const batch = keysToDelete.slice(i, i + batchSize);
+        await redisClient.del(...batch);
+      }
+      logger.info(`Cleared ${keysToDelete.length} idempotency keys`);
+      return keysToDelete.length;
     }
-    
+
     return 0;
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to clear all idempotency keys", error);
     return 0;
   }
@@ -367,9 +414,8 @@ export const getIdempotencyKeyTTL = async (key: string): Promise<number> => {
     const cacheKey = CACHE_KEYS.IDEMPOTENCY(key);
     const ttl = await redisClient.ttl(cacheKey);
     return ttl;
-  } catch (error:any) {
+  } catch (error: any) {
     logger.warn("Failed to get idempotency key TTL", error);
     return -1;
   }
 };
-

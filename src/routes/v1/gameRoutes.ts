@@ -18,10 +18,10 @@ import { idempotencyHandler } from "../../middlewares/idempotency";
 
 const router = Router();
 
-// Start a new game
+router.get("/:id/state", validateGameId, validateRequest, getGameState);
+router.get("/status", validatePagination, validateRequest, getGames);
+router.get("/recent", validateRequest, getRecentGames);
 router.post("/start", startGame);
-
-// Fire at a coordinate
 router.post(
   "/:id/fire",
   validateFire,
@@ -29,22 +29,7 @@ router.post(
   validateRequest,
   fire
 );
-
-// Get current game state
-router.get("/:id/state", validateGameId, validateRequest, getGameState);
-
-// Get games by status (optional filter) with pagination
-// Using GET for fetching data (RESTful best practice)
-// Query params: ?status=IN_PROGRESS&page=1&limit=10
-router.get("/status", validatePagination, validateRequest, getGames);
-
-// Get recent games (last 24 hours, IN_PROGRESS status)
-router.get("/recent", validateRequest, getRecentGames);
-
-// Delete a specific game
 router.delete("/:id", validateGameId, validateRequest, deleteGame);
-
-// Delete all games
 router.delete("/", deleteAllGames);
 
 export default router;

@@ -6,7 +6,7 @@ describe("placeShips()", () => {
     const allCoords = ships.flatMap((s) => s.positions);
     const uniqueCoords = new Set(allCoords);
 
-    expect(uniqueCoords.size).toBe(allCoords.length); 
+    expect(uniqueCoords.size).toBe(allCoords.length);
   });
 
   it("should generate valid coordinates", () => {

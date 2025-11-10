@@ -1,4 +1,3 @@
-// # TypeScript interfaces & entity types
 export interface Coordinate {
   row: string; // 'A' - 'J'
   col: number; // 1 - 10

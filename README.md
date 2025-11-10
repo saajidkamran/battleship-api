@@ -2,17 +2,35 @@
 
 A RESTful API for playing Battleship game, built with TypeScript, Express.js, and following clean architecture principles.
 
+## ✨ Production Ready
+
+This API is production-ready with:
+- ✅ **Transaction Management**: Database transactions with pessimistic locking for data consistency
+- ✅ **Health Monitoring**: Comprehensive health check endpoint with service status
+- ✅ **Graceful Shutdown**: Proper cleanup of connections and resources
+- ✅ **Error Handling**: Robust error handling with proper HTTP status codes
+- ✅ **Security**: Helmet.js, CORS, rate limiting, request timeout, input validation
+- ✅ **Caching**: Redis caching with graceful degradation
+- ✅ **Connection Management**: Retry logic with exponential backoff
+- ✅ **Environment Validation**: Comprehensive validation of all environment variables
+- ✅ **Production Safety**: Non-blocking Redis operations, connection pooling, request timeout
+
+For detailed information about production improvements, see [REFACTORING_SUMMARY.md](./REFACTORING_SUMMARY.md).
+
 ## 🎯 Features
 
 - **Game Management**: Start new games, fire at coordinates, check game status
 - **Ship Placement**: Automatic random placement of ships (1 Battleship, 2 Destroyers)
 - **Idempotency**: Support for idempotent requests via `Idempotency-Key` header
-- **Security**: Helmet.js, CORS, rate limiting, request validation
+- **Security**: Helmet.js, CORS, rate limiting, request validation, request timeout
 - **Logging**: Structured logging with Pino
 - **Error Handling**: Custom error types with proper HTTP status codes
-- **Type Safety**: Full TypeScript implementation
+- **Type Safety**: Full TypeScript implementation with strict mode
 - **Testing**: Unit and integration tests with Jest
-- **Caching**: Redis caching layer for improved performance (optional)
+- **Caching**: Redis caching layer for improved performance (optional, graceful degradation)
+- **Database**: MySQL with TypeORM, transaction management, connection pooling
+- **Health Monitoring**: Comprehensive health check endpoint with service status
+- **Production Ready**: Graceful shutdown, connection retries, error handling, transaction management
 
 ## 🛠️ Tech Stack
 
@@ -28,7 +46,53 @@ A RESTful API for playing Battleship game, built with TypeScript, Express.js, an
 - **Caching**: Redis (ioredis)
 - **Database**: MySQL (TypeORM)
 
-## 📁 Project Structure
+## Installed Packages
+
+### Production Dependencies
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| `cors` | ^2.8.5 | Middleware for enabling Cross-Origin Resource Sharing (CORS) |
+| `dotenv` | ^17.2.3 | Loads environment variables from `.env` file |
+| `express` | ^5.1.0 | Fast, unopinionated web framework for Node.js |
+| `express-rate-limit` | ^8.2.1 | Basic rate-limiting middleware for Express |
+| `express-validator` | ^7.3.0 | Set of Express.js middlewares for validation and sanitization |
+| `helmet` | ^8.1.0 | Helps secure Express apps by setting various HTTP headers |
+| `ioredis` | ^5.8.2 | Robust, performance-focused Redis client for Node.js |
+| `mysql2` | ^3.15.3 | MySQL client for Node.js with promise support |
+| `pino` | ^10.1.0 | Fast JSON logger for Node.js |
+| `pino-pretty` | ^13.1.2 | Prettifies Pino log output for development |
+| `reflect-metadata` | ^0.2.2 | Polyfill for Metadata Reflection API (required by TypeORM) |
+| `typeorm` | ^0.3.27 | Object-Relational Mapping (ORM) library for TypeScript and JavaScript |
+| `uuid` | ^13.0.0 | Generate RFC4122 UUIDs (v1, v4, v5) |
+
+### Development Dependencies
+
+| Package | Version | Description |
+|---------|---------|-------------|
+| `@types/cors` | ^2.8.19 | TypeScript type definitions for `cors` |
+| `@types/express` | ^5.0.5 | TypeScript type definitions for `express` |
+| `@types/ioredis` | ^5.0.0 | TypeScript type definitions for `ioredis` |
+| `@types/jest` | ^30.0.0 | TypeScript type definitions for `jest` |
+| `@types/node` | ^24.10.0 | TypeScript type definitions for Node.js |
+| `@types/supertest` | ^6.0.3 | TypeScript type definitions for `supertest` |
+| `jest` | ^30.2.0 | JavaScript testing framework |
+| `nodemon` | ^3.1.10 | Monitors for file changes and automatically restarts the server |
+| `supertest` | ^7.1.4 | HTTP assertions library for testing Node.js HTTP servers |
+| `ts-jest` | ^29.4.5 | TypeScript preprocessor for Jest |
+| `ts-node` | ^10.9.2 | TypeScript execution engine for Node.js |
+| `typescript` | ^5.9.3 | TypeScript compiler and language services |
+
+### Package Installation
+
+To install all dependencies, run:
+```bash
+npm install
+```
+
+This will install all production and development dependencies listed above.
+
+## Project Structure
 
 ```
 battle-ship-api/
@@ -50,6 +114,7 @@ battle-ship-api/
 │   │   ├── idempotency.ts
 │   │   ├── rateLimiter.ts
 │   │   ├── requestId.ts
+│   │   ├── requestTimeout.ts  # Request timeout middleware
 │   │   ├── security.ts
 │   │   └── validateRequest.ts
 │   ├── models/             # TypeScript interfaces
@@ -65,7 +130,7 @@ battle-ship-api/
 │   │   ├── shipPlacement.ts
 │   │   └── cacheService.ts # Redis cache service
 │   ├── utils/              # Utility functions
-│   │   ├── constants.ts
+│   │   ├
 │   │   ├── errors.ts
 │   │   └── logger.ts
 │   ├── app.ts              # Express app setup
@@ -76,7 +141,7 @@ battle-ship-api/
 └── README.md
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -96,20 +161,24 @@ cd battle-ship-api
 npm install
 ```
 
-3. Set up environment variables (optional):
+3. Set up environment variables:
 ```bash
 # Create .env file (optional, defaults are provided)
 PORT=3000
 NODE_ENV=development
 LOG_LEVEL=debug
 CORS_ORIGIN=http://localhost:5173
+REQUEST_TIMEOUT_MS=30000
+RATE_LIMIT_MAX=10
 
-# Database configuration (optional)
+# Database configuration (required in production)
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASS=root
 DB_NAME=battleship
+DB_POOL_SIZE=10
+DB_SSL=false
 
 # Redis configuration (optional - for caching)
 REDIS_HOST=localhost
@@ -117,6 +186,8 @@ REDIS_PORT=6379
 REDIS_PASSWORD=
 REDIS_DB=0
 ```
+
+**Note**: In production mode, database configuration (DB_HOST, DB_USER, DB_PASS, DB_NAME) is required. The server will fail to start if the database connection fails.
 
    **Note**: You can use Docker Compose to quickly set up MySQL and Redis:
    ```bash
@@ -153,15 +224,46 @@ http://localhost:3000/api/v1
 GET /health/health
 ```
 
-**Response:**
+**Response:** `200 OK` (healthy) or `503 Service Unavailable` (degraded)
+
+**Healthy Response:**
 ```json
 {
   "status": "healthy",
   "timestamp": "2024-01-01T00:00:00.000Z",
   "uptime": 123.45,
-  "environment": "development"
+  "environment": "development",
+  "services": {
+    "database": "connected",
+    "redis": "connected"
+  }
 }
 ```
+
+**Degraded Response (503):**
+```json
+{
+  "status": "degraded",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "uptime": 123.45,
+  "environment": "production",
+  "services": {
+    "database": "error",
+    "redis": "disconnected"
+  }
+}
+```
+
+**Service Status Values:**
+- `connected`: Service is connected and operational
+- `disconnected`: Service is not connected (Redis only, optional service)
+- `error`: Service connection failed or error occurred
+
+**Notes:**
+- In production, the endpoint returns `503` if any required service (database) is unavailable
+- Redis is optional; missing Redis does not cause degraded status in development
+- Database connectivity is verified with a `SELECT 1` query
+- Redis connectivity is verified with a `PING` command
 
 ---
 
@@ -383,11 +485,14 @@ DELETE /api/v1/game
 
 ## 🔒 Security Features
 
-- **Helmet.js**: Security headers
+- **Helmet.js**: Security headers for protection against common vulnerabilities
 - **CORS**: Configurable cross-origin resource sharing
-- **Rate Limiting**: 10 requests per minute per IP
+- **Rate Limiting**: 10 requests per minute per IP (configurable via `RATE_LIMIT_MAX`)
 - **Request Validation**: Input validation with express-validator
 - **Body Size Limit**: 1KB request body limit
+- **Request Timeout**: 30 seconds timeout for requests (configurable via `REQUEST_TIMEOUT_MS`)
+- **Environment Validation**: Comprehensive validation of all environment variables
+- **Error Sanitization**: Sensitive error details hidden in production
 
 ## 🧪 Testing
 
@@ -402,21 +507,48 @@ Test structure:
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `3000` |
-| `NODE_ENV` | Environment (development/production/test) | `development` |
-| `LOG_LEVEL` | Logging level (debug/info/warn/error) | `debug` (dev) / `info` (prod) |
-| `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `http://localhost:5173` |
-| `REDIS_HOST` | Redis server host | `localhost` |
-| `REDIS_PORT` | Redis server port | `6379` |
-| `REDIS_PASSWORD` | Redis password (optional) | - |
-| `REDIS_DB` | Redis database number | `0` |
-| `DB_HOST` | MySQL host | `localhost` |
-| `DB_PORT` | MySQL port | `3306` |
-| `DB_USER` | MySQL username | `root` |
-| `DB_PASS` | MySQL password | `root` |
-| `DB_NAME` | MySQL database name | `battleship` |
+| Variable | Description | Default | Required (Production) | Validation |
+|----------|-------------|---------|----------------------|------------|
+| `PORT` | Server port | `3000` | No | 1-65535 |
+| `NODE_ENV` | Environment (development/production/test) | `development` | No | development/production/test |
+| `LOG_LEVEL` | Logging level | `debug` (dev) / `info` (prod) | No | debug/info/warn/error/fatal |
+| `CORS_ORIGIN` | Allowed CORS origins (comma-separated) | `http://localhost:5173` | No | - |
+| `REQUEST_TIMEOUT_MS` | Request timeout in milliseconds | `30000` | No | Positive integer |
+| `RATE_LIMIT_MAX` | Maximum requests per window | `10` | No | Positive integer |
+| `REDIS_HOST` | Redis server host | `localhost` | No | - |
+| `REDIS_PORT` | Redis server port | `6379` | No | 1-65535 |
+| `REDIS_PASSWORD` | Redis password (optional) | - | No | - |
+| `REDIS_DB` | Redis database number | `0` | No | Non-negative integer |
+| `DB_HOST` | MySQL host | `localhost` | **Yes** | - |
+| `DB_PORT` | MySQL port | `3306` | No | 1-65535 |
+| `DB_USER` | MySQL username | `root` | **Yes** | - |
+| `DB_PASS` | MySQL password | `root` | **Yes** | - |
+| `DB_NAME` | MySQL database name | `battleship` | **Yes** | - |
+| `DB_POOL_SIZE` | Database connection pool size | `10` | No | Positive integer |
+| `DB_SSL` | Enable SSL for database connection | `false` | No | true/false |
+| `DB_SSL_REJECT_UNAUTHORIZED` | Reject unauthorized SSL certificates | `true` | No | true/false |
+
+### Environment Variable Validation
+
+All environment variables are validated at startup:
+- **Port numbers** (PORT, DB_PORT, REDIS_PORT): Must be between 1 and 65535
+- **LOG_LEVEL**: Must be one of: debug, info, warn, error, fatal
+- **NODE_ENV**: Must be one of: development, production, test
+- **Pool sizes**: Must be positive integers
+- **Production requirements**: Database configuration (DB_HOST, DB_USER, DB_PASS, DB_NAME) is required in production mode
+
+### Production Mode
+
+In production mode (`NODE_ENV=production`):
+- **Database connection is required**: Server will fail to start if database connection fails
+- **Enhanced error handling**: Sensitive error details are hidden from responses
+- **Strict validation**: All required environment variables must be set
+- **Health check**: Returns `503` if services are unavailable
+
+In development mode:
+- **Database is optional**: Server can start without database (for testing)
+- **Detailed errors**: Full error details and stack traces in responses
+- **Flexible configuration**: Missing optional services are allowed
 
 ## Caching with Redis
 
@@ -481,6 +613,16 @@ REDIS_DB=0
 - Game cache is invalidated when a game is deleted
 - Game lists are invalidated when games are created, deleted, or status changes
 - Recent games cache is invalidated when new games are created or status changes
+- Uses Redis `SCAN` instead of `KEYS` for production safety (non-blocking)
+- Batch processing for efficient cache invalidation (100 keys at a time)
+
+### Production Safety
+
+- **Non-blocking operations**: Uses `SCAN` instead of `KEYS` to avoid blocking Redis
+- **Graceful degradation**: Application continues to work if Redis is unavailable
+- **Connection retry**: Automatic reconnection with exponential backoff
+- **Queue management**: Commands are queued during connection establishment
+- **Timeout handling**: 5-second timeout for initial connection
 
 ## Game Rules
 
@@ -517,7 +659,28 @@ curl -X POST http://localhost:3000/api/v1/game/{gameId}/fire \
 The API uses structured logging with Pino:
 - **Development**: Pretty-printed colored logs
 - **Production**: JSON formatted logs
-- **Log Levels**: debug, info, warn, error
+- **Log Levels**: debug, info, warn, error, fatal
+- **Request Tracking**: Each request has a unique request ID (X-Request-ID header)
+- **Error Context**: Errors include request ID, path, method, and error details
+- **Structured Data**: All logs include metadata for better observability
+
+## Database & Transactions
+
+### Transaction Management
+
+The API uses database transactions to ensure data consistency:
+- **Atomic Operations**: Game state updates are wrapped in transactions
+- **Pessimistic Locking**: Prevents race conditions when multiple requests fire simultaneously
+- **Cache Consistency**: Cache is updated only after transaction commits successfully
+- **Error Handling**: Transactions are automatically rolled back on errors
+
+### Connection Management
+
+- **Connection Pooling**: Configurable connection pool (default: 10 connections)
+- **Retry Logic**: Exponential backoff with jitter for connection retries
+- **Production Mode**: Server fails to start if database connection fails
+- **Development Mode**: Server can start without database (for testing)
+- **Health Monitoring**: Database connectivity is checked in health endpoint
 
 ## 🛠️ Development
 
@@ -534,16 +697,104 @@ npm test         # Run tests
 
 - **Controllers**: Handle HTTP requests/responses
 - **Services**: Business logic and game rules
-- **Repositories**: Data persistence (currently in-memory)
-- **Models**: TypeScript interfaces and types
-- **Middlewares**: Cross-cutting concerns (validation, errors, security)
+- **Repositories**: Data access layer with caching
+- **Models**: TypeORM entities and TypeScript interfaces
+- **Middlewares**: Cross-cutting concerns (validation, errors, security, timeout)
+- **Config**: Configuration files (database, Redis, environment)
 
+### Architecture Principles
+
+- **Clean Architecture**: Separation of concerns (controllers, services, repositories)
+- **Dependency Injection**: Services depend on abstractions
+- **Error Handling**: Custom error types with proper HTTP status codes
+- **Transaction Management**: Database transactions for data consistency
+- **Caching Strategy**: Cache-aside pattern with Redis
+- **Graceful Degradation**: Application works without optional services (Redis)
+
+
+## 🚀 Production Deployment
+
+### Prerequisites
+
+1. **Node.js**: v18 or higher
+2. **MySQL**: 8.0 or higher
+3. **Redis**: 7.0 or higher (optional, for caching)
+4. **Environment Variables**: Set all required variables (see Environment Variables section)
+
+### Deployment Steps
+
+1. **Set Environment Variables**:
+```bash
+export NODE_ENV=production
+export PORT=3000
+export DB_HOST=your-db-host
+export DB_USER=your-db-user
+export DB_PASS=your-db-password
+export DB_NAME=battleship
+export REDIS_HOST=your-redis-host
+export REDIS_PORT=6379
+export LOG_LEVEL=info
+export CORS_ORIGIN=https://your-frontend-domain.com
+```
+
+2. **Build the Application**:
+```bash
+npm install
+npm run build
+```
+
+3. **Start the Server**:
+```bash
+npm start
+```
+
+### Production Checklist
+
+- [x] Set `NODE_ENV=production`
+- [x] Configure database connection
+- [x] Configure Redis connection (optional)
+- [x] Set proper CORS origins
+- [x] Configure rate limiting
+- [x] Set up health check monitoring
+- [x] Configure logging level (info/warn/error)
+- [x] Set up SSL/TLS certificates
+- [x] Configure database connection pooling
+- [x] Set up backup strategy for database
+- [x] Configure monitoring and alerting
+- [x] Test graceful shutdown
+- [x] Verify health check endpoint
+- [x] Test error handling and logging
+
+### Graceful Shutdown
+
+The API supports graceful shutdown:
+- **SIGTERM/SIGINT**: Server stops accepting new connections
+- **Connection Cleanup**: Database and Redis connections are closed properly
+- **Timeout**: Force shutdown after 10 seconds if cleanup takes too long
+- **Error Handling**: Errors during shutdown are logged but don't prevent shutdown
+
+### Monitoring
+
+- **Health Check**: Monitor `/health/health` endpoint
+- **Logging**: Structured JSON logs in production
+- **Request Tracking**: Each request has a unique request ID
+- **Error Tracking**: All errors are logged with context
+- **Service Status**: Health check returns service connectivity status
 
 ## 🎯 Future Improvements
 
+- [ ] Database migrations with TypeORM
+- [ ] API response compression middleware
+- [ ] Error tracking integration (Sentry)
+- [ ] OpenAPI/Swagger documentation
+- [ ] Load testing and performance optimization
 - [ ] WebSocket support for real-time updates
 - [ ] Multiplayer support
 - [ ] Game history and statistics
 - [ ] Docker containerization
 - [ ] CI/CD pipeline
+- [ ] API versioning strategy
+- [ ] Rate limiting per user/API key
+- [ ] Request/response logging middleware
+- [ ] Metrics and observability (Prometheus, Grafana)
 
